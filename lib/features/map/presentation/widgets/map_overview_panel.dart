@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../core/config/app_map_config.dart';
+import '../controllers/places_map_controller.dart';
 
-class MapOverviewPanel extends StatelessWidget {
+class MapOverviewPanel extends GetView<PlacesMapController> {
   const MapOverviewPanel({required this.isCompact, super.key});
 
   final bool isCompact;
@@ -45,6 +47,15 @@ class MapOverviewPanel extends StatelessWidget {
             _MapChip(
               label: 'Затем добавятся задачи с местом',
               icon: Icons.checklist_rtl_outlined,
+            ),
+            _MapChip(
+              label: 'Подложка: ${controller.activeTileProvider.providerLabel}',
+              icon: Icons.layers_outlined,
+            ),
+            _MapChip(
+              label:
+                  'Режим tiles: ${controller.activeTileProvider.cachePolicy.label}',
+              icon: Icons.cloud_sync_outlined,
             ),
           ],
         ),

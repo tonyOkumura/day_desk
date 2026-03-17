@@ -100,6 +100,110 @@ void main() {
       expect(logger.errorEvents, hasLength(1));
     },
   );
+
+  test(
+    'успешный reset settings возвращает foundation-настройки к дефолтам',
+    () async {
+      final RecordingAppLogger logger = RecordingAppLogger();
+      final RecordingAppNotificationService notifications =
+          RecordingAppNotificationService();
+      final FakeSettingsRepository repository = FakeSettingsRepository(
+        initialSettings: const AppSettings(
+          workDayStartHour: 8,
+          workDayEndHour: 19,
+          minimumFreeSlotMinutes: 45,
+          notificationsEnabled: false,
+        ),
+      );
+      final ThemeController themeController = ThemeController(
+        logger: AppLogger(),
+        notificationService: RecordingAppNotificationService(),
+        repository: FakeSettingsRepository(),
+        initialPreference: AppThemePreference.light,
+        initialPalette: AppThemePalette.green,
+      );
+      final SettingsController controller = SettingsController(
+        themeController: themeController,
+        logger: logger,
+        notificationService: notifications,
+        repository: repository,
+        initialSettings: const AppSettings(
+          themePreference: AppThemePreference.light,
+          themePalette: AppThemePalette.green,
+          workDayStartHour: 8,
+          workDayEndHour: 19,
+          minimumFreeSlotMinutes: 45,
+          notificationsEnabled: false,
+        ),
+      );
+
+      await controller.resetSettings();
+
+      expect(themeController.preference, AppThemePreference.dark);
+      expect(themeController.palette, AppThemePalette.blue);
+      expect(controller.workDayStartHour, AppSettings.defaultWorkDayStartHour);
+      expect(controller.workDayEndHour, AppSettings.defaultWorkDayEndHour);
+      expect(
+        controller.minimumFreeSlotMinutes,
+        AppSettings.defaultMinimumFreeSlotMinutes,
+      );
+      expect(
+        controller.notificationsEnabled,
+        AppSettings.defaultNotificationsEnabled,
+      );
+      expect(notifications.successEvents, hasLength(1));
+    },
+  );
+
+  test(
+    'ошибка reset settings откатывает состояние и показывает error notification',
+    () async {
+      final RecordingAppLogger logger = RecordingAppLogger();
+      final RecordingAppNotificationService notifications =
+          RecordingAppNotificationService();
+      final FakeSettingsRepository repository = FakeSettingsRepository(
+        initialSettings: const AppSettings(
+          workDayStartHour: 8,
+          workDayEndHour: 19,
+          minimumFreeSlotMinutes: 45,
+          notificationsEnabled: false,
+        ),
+        failOnReset: true,
+      );
+      final ThemeController themeController = ThemeController(
+        logger: AppLogger(),
+        notificationService: RecordingAppNotificationService(),
+        repository: FakeSettingsRepository(),
+        initialPreference: AppThemePreference.light,
+        initialPalette: AppThemePalette.green,
+      );
+      final SettingsController controller = SettingsController(
+        themeController: themeController,
+        logger: logger,
+        notificationService: notifications,
+        repository: repository,
+        initialSettings: const AppSettings(
+          themePreference: AppThemePreference.light,
+          themePalette: AppThemePalette.green,
+          workDayStartHour: 8,
+          workDayEndHour: 19,
+          minimumFreeSlotMinutes: 45,
+          notificationsEnabled: false,
+        ),
+      );
+
+      await controller.resetSettings();
+
+      expect(themeController.preference, AppThemePreference.light);
+      expect(themeController.palette, AppThemePalette.green);
+      expect(controller.workDayStartHour, 8);
+      expect(controller.workDayEndHour, 19);
+      expect(controller.minimumFreeSlotMinutes, 45);
+      expect(controller.notificationsEnabled, isFalse);
+      expect(notifications.errorEvents, hasLength(1));
+      expect(logger.errorEvents, hasLength(1));
+    },
+  );
 }
 
 ThemeController _buildThemeController() {
@@ -182,10 +286,12 @@ class FakeSettingsRepository implements AppSettingsRepository {
   FakeSettingsRepository({
     AppSettings? initialSettings,
     this.failOnSaveBounds = false,
+    this.failOnReset = false,
   }) : _settings = initialSettings ?? const AppSettings();
 
   AppSettings _settings;
   final bool failOnSaveBounds;
+  final bool failOnReset;
 
   @override
   Future<AppSettings> readSettings() async {
@@ -225,5 +331,14 @@ class FakeSettingsRepository implements AppSettingsRepository {
   @override
   Future<void> saveNotificationsEnabled(bool enabled) async {
     _settings = _settings.copyWith(notificationsEnabled: enabled);
+  }
+
+  @override
+  Future<void> resetSettings() async {
+    if (failOnReset) {
+      throw StateError('reset failed');
+    }
+
+    _settings = const AppSettings();
   }
 }

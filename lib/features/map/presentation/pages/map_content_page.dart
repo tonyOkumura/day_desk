@@ -10,6 +10,8 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/config/app_breakpoints.dart';
 import '../../../../core/config/app_map_config.dart';
+import '../../../../core/widgets/app_error_state.dart';
+import '../../../../core/widgets/app_loading_state.dart';
 import '../controllers/places_map_controller.dart';
 import '../widgets/map_overview_panel.dart';
 
@@ -34,6 +36,7 @@ class MapContentPage extends GetView<PlacesMapController> {
           fit: StackFit.expand,
           children: <Widget>[
             const Positioned.fill(child: _MapSurface()),
+            const Positioned.fill(child: _MapStatusOverlay()),
             Positioned(
               top: edgePadding,
               right: edgePadding,
@@ -41,17 +44,6 @@ class MapContentPage extends GetView<PlacesMapController> {
                 compact: useCompactLayout,
                 controller: controller,
               ),
-            ),
-            Positioned(
-              left: edgePadding,
-              top: edgePadding,
-              child: Obx(() {
-                if (!controller.tileLayerUnavailable) {
-                  return const SizedBox.shrink();
-                }
-
-                return const _MapTileFallbackChip();
-              }),
             ),
             if (useCompactLayout)
               Positioned.fill(
@@ -295,83 +287,113 @@ class _MapSurface extends GetView<PlacesMapController> {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colorScheme = theme.colorScheme;
 
-    return ClipRect(
-      child: ColoredBox(
-        key: const Key('map-interactive-surface'),
-        color: colorScheme.surfaceContainerLowest,
-        child: SizedBox.expand(
-          child: fm.FlutterMap(
-            key: const Key('moscow-map'),
-            mapController: controller.mapController,
-            options: const fm.MapOptions(
-              initialCenter: AppMapConfig.moscowCenter,
-              initialZoom: AppMapConfig.initialZoom,
-              interactionOptions: fm.InteractionOptions(
-                flags: fm.InteractiveFlag.all & ~fm.InteractiveFlag.rotate,
+    return Obx(() {
+      final int tileLayerGeneration = controller.tileLayerGeneration;
+      final source = controller.activeTileProvider;
+
+      return ClipRect(
+        child: ColoredBox(
+          key: const Key('map-interactive-surface'),
+          color: colorScheme.surfaceContainerLowest,
+          child: SizedBox.expand(
+            child: fm.FlutterMap(
+              key: const Key('moscow-map'),
+              mapController: controller.mapController,
+              options: const fm.MapOptions(
+                initialCenter: AppMapConfig.moscowCenter,
+                initialZoom: AppMapConfig.initialZoom,
+                interactionOptions: fm.InteractionOptions(
+                  flags: fm.InteractiveFlag.all & ~fm.InteractiveFlag.rotate,
+                ),
               ),
+              children: <Widget>[
+                fm.TileLayer(
+                  key: ValueKey<int>(tileLayerGeneration),
+                  urlTemplate: source.urlTemplate,
+                  userAgentPackageName: source.userAgentPackageName,
+                  tileDisplay: const fm.TileDisplay.fadeIn(),
+                  tileBuilder:
+                      (
+                        BuildContext context,
+                        Widget tileWidget,
+                        fm.TileImage tile,
+                      ) {
+                        if (tile.imageInfo != null && !tile.loadError) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            controller.handleFirstTileRendered();
+                          });
+                        }
+                        return tileWidget;
+                      },
+                  errorTileCallback:
+                      (
+                        fm.TileImage tile,
+                        Object error,
+                        StackTrace? stackTrace,
+                      ) {
+                        controller.handleTileLayerError(
+                          error,
+                          stackTrace: stackTrace,
+                          details: tile.coordinates.toString(),
+                        );
+                      },
+                ),
+                fm.RichAttributionWidget(
+                  attributions: <fm.SourceAttribution>[
+                    fm.TextSourceAttribution(source.attributionLabel),
+                  ],
+                ),
+              ],
             ),
-            children: <Widget>[
-              fm.TileLayer(
-                urlTemplate: AppMapConfig.tileUrlTemplate,
-                userAgentPackageName: AppMapConfig.userAgentPackageName,
-                tileDisplay: const fm.TileDisplay.fadeIn(),
-                errorTileCallback:
-                    (fm.TileImage tile, Object error, StackTrace? stackTrace) {
-                      controller.handleTileLayerError(
-                        error,
-                        stackTrace: stackTrace,
-                        details: tile.coordinates.toString(),
-                      );
-                    },
-              ),
-              const fm.RichAttributionWidget(
-                attributions: <fm.SourceAttribution>[
-                  fm.TextSourceAttribution(AppMapConfig.attributionLabel),
-                ],
-              ),
-            ],
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 }
 
-class _MapTileFallbackChip extends StatelessWidget {
-  const _MapTileFallbackChip();
+class _MapStatusOverlay extends GetView<PlacesMapController> {
+  const _MapStatusOverlay();
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme colorScheme = theme.colorScheme;
-
-    return _MapOverlaySurface(
-      key: const Key('map-tile-error-chip'),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      backgroundColor: colorScheme.errorContainer.withValues(alpha: 0.96),
-      borderColor: colorScheme.error.withValues(alpha: 0.22),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(
-            Icons.cloud_off_rounded,
-            size: 16,
-            color: colorScheme.onErrorContainer,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Text(
-            'Подложка карты временно недоступна',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: colorScheme.onErrorContainer,
-              fontWeight: FontWeight.w700,
+    return Obx(() {
+      if (controller.tileLayerUnavailable) {
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: _MapOverlaySurface(
+              key: const Key('map-status-error'),
+              child: AppErrorState(
+                title: 'Не удалось загрузить карту',
+                message:
+                    'Подложка сейчас недоступна. Можно повторить загрузку или '
+                    'продолжить работу с панелью карты.',
+                actionLabel: 'Повторить',
+                onAction: controller.retryLoading,
+              ),
             ),
           ),
-        ],
-      ),
-    );
+        );
+      }
+
+      if (controller.isMapLoading) {
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: _MapOverlaySurface(
+              key: const Key('map-status-loading'),
+              child: const AppLoadingState(
+                title: 'Загружаем карту',
+                message: 'Подключаем tiles и готовим интерактивный canvas.',
+              ),
+            ),
+          ),
+        );
+      }
+
+      return const SizedBox.shrink();
+    });
   }
 }
 
@@ -440,15 +462,11 @@ class _MapOverlaySurface extends StatelessWidget {
   const _MapOverlaySurface({
     required this.child,
     this.padding = const EdgeInsets.all(AppSpacing.lg),
-    this.backgroundColor,
-    this.borderColor,
     super.key,
   });
 
   final Widget child;
   final EdgeInsets padding;
-  final Color? backgroundColor;
-  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -460,14 +478,10 @@ class _MapOverlaySurface extends StatelessWidget {
       color: Colors.transparent,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color:
-              backgroundColor ??
-              AppTheme.surfaceColor(context).withValues(alpha: 0.94),
+          color: AppTheme.surfaceColor(context).withValues(alpha: 0.94),
           borderRadius: BorderRadius.circular(AppRadii.card),
           border: Border.all(
-            color:
-                borderColor ??
-                colorScheme.outlineVariant.withValues(alpha: 0.4),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.4),
           ),
           boxShadow: <BoxShadow>[
             BoxShadow(

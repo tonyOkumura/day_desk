@@ -3,7 +3,9 @@ import 'package:day_desk/app/controllers/theme_controller.dart';
 import 'package:day_desk/app/navigation/app_destination.dart';
 import 'package:day_desk/app/routes/app_routes.dart';
 import 'package:day_desk/features/map/presentation/controllers/places_map_controller.dart';
+import 'package:day_desk/features/settings/domain/entities/app_settings.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_palette.dart';
+import 'package:day_desk/features/settings/domain/entities/app_theme_preference.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -57,6 +59,7 @@ void main() {
     expect(find.text('Карта дня'), findsWidgets);
     expect(find.byKey(const Key('page-app-bar-map')), findsOneWidget);
     expect(find.byKey(const Key('map-compact-sheet')), findsOneWidget);
+    expect(find.byKey(const Key('map-status-loading')), findsOneWidget);
     expect(
       find.text(
         'Стартовый картографический экран Москвы и будущих мест на день.',
@@ -321,7 +324,7 @@ void main() {
 
     await _sendControlShortcut(tester, LogicalKeyboardKey.digit2);
     await tester.pump();
-    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 450));
 
     expect(controller.currentDestination, AppDestination.map);
     expect(controller.currentRoutePath, AppDestination.map.route);
@@ -432,7 +435,7 @@ void main() {
   });
 
   testWidgets(
-    'ошибка tile layer показывает fallback chip без падения страницы',
+    'ошибка tile layer показывает fallback state и retry возвращает loading',
     (WidgetTester tester) async {
       final AppTestHarness harness = await AppTestHarness.bootstrap();
       addTearDown(() async => harness.dispose());
@@ -446,9 +449,14 @@ void main() {
       controller.handleTileLayerError(Exception('tile test failure'));
       await tester.pump();
 
-      expect(find.byKey(const Key('map-tile-error-chip')), findsOneWidget);
-      expect(find.text('Подложка карты временно недоступна'), findsOneWidget);
+      expect(find.byKey(const Key('map-status-error')), findsOneWidget);
+      expect(find.text('Не удалось загрузить карту'), findsOneWidget);
       expect(find.byType(FlutterMap), findsOneWidget);
+
+      await tester.tap(find.text('Повторить'));
+      await tester.pump();
+
+      expect(find.byKey(const Key('map-status-loading')), findsOneWidget);
     },
   );
 
@@ -465,6 +473,65 @@ void main() {
 
     expect(find.byType(Scrollbar), findsWidgets);
   });
+
+  testWidgets('settings показывают about section и reset action', (
+    WidgetTester tester,
+  ) async {
+    final AppTestHarness harness = await AppTestHarness.bootstrap();
+    addTearDown(() async => harness.dispose());
+
+    AppTestHarness.setSurfaceSize(tester, size: const Size(390, 844));
+    addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+    await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.settings);
+
+    await tester.ensureVisible(find.byKey(const Key('about-section')));
+
+    expect(find.text('О приложении'), findsOneWidget);
+    expect(find.text('Day Desk'), findsOneWidget);
+    expect(find.text('1.0.0'), findsOneWidget);
+    expect(find.text('1'), findsWidgets);
+    expect(find.byKey(const Key('reset-settings-button')), findsOneWidget);
+  });
+
+  testWidgets(
+    'reset settings возвращает дефолтные значения через confirm dialog',
+    (WidgetTester tester) async {
+      final FakeAppSettingsRepository repository = FakeAppSettingsRepository(
+        initialSettings: const AppSettings(
+          themePreference: AppThemePreference.light,
+          themePalette: AppThemePalette.green,
+          workDayStartHour: 8,
+          workDayEndHour: 19,
+          minimumFreeSlotMinutes: 45,
+          notificationsEnabled: false,
+        ),
+      );
+      final AppTestHarness harness = await AppTestHarness.bootstrap(
+        repository: repository,
+      );
+      addTearDown(() async => harness.dispose());
+
+      AppTestHarness.setSurfaceSize(tester, size: const Size(390, 844));
+      addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+      await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.settings);
+      await tester.ensureVisible(
+        find.byKey(const Key('reset-settings-button')),
+      );
+
+      await tester.tap(find.byKey(const Key('reset-settings-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Сбросить'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('active_theme=dark'), findsOneWidget);
+      expect(find.text('active_palette=blue'), findsOneWidget);
+      expect(find.text('work_day=09:00-18:00'), findsOneWidget);
+      expect(find.text('minimum_free_slot=30'), findsOneWidget);
+      expect(find.text('notifications_enabled=true'), findsOneWidget);
+    },
+  );
 }
 
 Future<void> _sendControlShortcut(

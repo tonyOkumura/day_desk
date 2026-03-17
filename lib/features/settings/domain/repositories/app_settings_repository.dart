@@ -17,4 +17,6 @@ abstract interface class AppSettingsRepository {
   Future<void> saveMinimumFreeSlotMinutes(int minutes);
 
   Future<void> saveNotificationsEnabled(bool enabled);
+
+  Future<void> resetSettings();
 }

@@ -7,9 +7,11 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:isar/isar.dart';
 
+import '../../core/app_info/app_info_service.dart';
 import '../../core/date/app_date_formatter.dart';
 import '../../core/errors/app_error_handler.dart';
 import '../../core/logging/app_logger.dart';
+import '../../core/map/map_tile_provider.dart';
 import '../../core/storage/app_database.dart';
 import '../../core/storage/app_directories.dart';
 import '../../features/settings/data/datasources/app_settings_local_data_source.dart';
@@ -98,6 +100,14 @@ class AppBootstrap {
     Get.put<AppSettingsRepository>(settingsRepository, permanent: true);
 
     final AppSettings initialSettings = await settingsRepository.readSettings();
+    final AppInfoService appInfoService = await AppInfoService.load(
+      logger: logger,
+    );
+    Get.put<AppInfoService>(appInfoService, permanent: true);
+    Get.put<MapTileProvider>(
+      const OpenStreetMapTileProvider(),
+      permanent: true,
+    );
 
     final AppStartupState startupState = AppStartupState(
       initialSettings: initialSettings,

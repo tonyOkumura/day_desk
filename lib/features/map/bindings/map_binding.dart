@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 
 import '../../../core/logging/app_logger.dart';
+import '../../../core/map/map_tile_provider.dart';
 import '../presentation/controllers/places_map_controller.dart';
 
 class MapBinding extends Bindings {
@@ -8,7 +9,10 @@ class MapBinding extends Bindings {
   void dependencies() {
     if (!Get.isRegistered<PlacesMapController>()) {
       Get.put<PlacesMapController>(
-        PlacesMapController(logger: Get.find<AppLogger>()),
+        PlacesMapController(
+          logger: Get.find<AppLogger>(),
+          tileProvider: Get.find<MapTileProvider>(),
+        ),
         permanent: true,
       );
     }

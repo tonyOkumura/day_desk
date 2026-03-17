@@ -84,12 +84,18 @@ class SettingsController extends GetxController {
         .toList(growable: false);
   }
 
-  Future<void> selectTheme(AppThemePreference preference) {
-    return _themeController.setPreference(preference);
+  Future<void> selectTheme(AppThemePreference preference) async {
+    await _themeController.setPreference(preference);
+    _settings.value = _settings.value.copyWith(
+      themePreference: _themeController.preference,
+    );
   }
 
-  Future<void> selectPalette(AppThemePalette palette) {
-    return _themeController.setPalette(palette);
+  Future<void> selectPalette(AppThemePalette palette) async {
+    await _themeController.setPalette(palette);
+    _settings.value = _settings.value.copyWith(
+      themePalette: _themeController.palette,
+    );
   }
 
   Future<void> setWorkDayStartHour(int hour) async {
@@ -250,5 +256,42 @@ class SettingsController extends GetxController {
         message: 'Изменение не сохранилось. Попробуй ещё раз.',
       );
     }
+  }
+
+  Future<void> resetSettings() async {
+    final AppSettings previousSettings = _settingsSnapshotWithTheme();
+    const AppSettings defaultSettings = AppSettings();
+
+    _settings.value = defaultSettings;
+    _themeController.applySettingsSnapshot(defaultSettings);
+
+    try {
+      await _repository.resetSettings();
+      _logger.info('Settings reset completed.', tag: 'SettingsController');
+      _notificationService.showSuccess(
+        title: 'Настройки сброшены',
+        message: 'Foundation-настройки возвращены к значениям по умолчанию.',
+      );
+    } catch (error, stackTrace) {
+      _settings.value = previousSettings;
+      _themeController.applySettingsSnapshot(previousSettings);
+      _logger.error(
+        'Failed to reset settings.',
+        tag: 'SettingsController',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      _notificationService.showError(
+        title: 'Не удалось сбросить настройки',
+        message: 'Изменения не применились. Попробуй ещё раз.',
+      );
+    }
+  }
+
+  AppSettings _settingsSnapshotWithTheme() {
+    return _settings.value.copyWith(
+      themePreference: _themeController.preference,
+      themePalette: _themeController.palette,
+    );
   }
 }

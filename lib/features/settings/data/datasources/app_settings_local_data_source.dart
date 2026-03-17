@@ -47,6 +47,15 @@ class AppSettingsLocalDataSource {
     });
   }
 
+  Future<void> resetSettings() async {
+    final AppSettingsLocalModel settings = AppSettingsLocalModel()
+      ..updatedAt = DateTime.now();
+
+    await _isar.writeTxn(() async {
+      await _isar.appSettingsLocalModels.put(settings);
+    });
+  }
+
   Future<void> _saveSettings(
     void Function(AppSettingsLocalModel settings) update,
   ) async {

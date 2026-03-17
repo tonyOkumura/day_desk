@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/widgets/app_surface_card.dart';
+import '../../core/widgets/app_section_card.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 
@@ -25,29 +25,21 @@ class FeaturePlaceholderView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        AppSurfaceCard(
+        AppSectionCard(
+          title: title,
+          description: summary,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
-                title,
-                style: textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                summary,
-                style: textTheme.bodyLarge,
-              ),
-              const SizedBox(height: AppSpacing.lg),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.md,
                   vertical: AppSpacing.sm,
                 ),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -63,17 +55,11 @@ class FeaturePlaceholderView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xl),
-        AppSurfaceCard(
+        AppSectionCard(
+          title: 'Что уже заложено',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
-                'Что уже заложено',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
               ...highlights.map(
                 (String item) => Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -89,12 +75,7 @@ class FeaturePlaceholderView extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Text(
-                          item,
-                          style: textTheme.bodyMedium,
-                        ),
-                      ),
+                      Expanded(child: Text(item, style: textTheme.bodyMedium)),
                     ],
                   ),
                 ),
@@ -103,21 +84,12 @@ class FeaturePlaceholderView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xl),
-        AppSurfaceCard(
+        AppSectionCard(
+          title: 'Следующий шаг',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
-                'Следующий шаг',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                nextMilestone,
-                style: textTheme.bodyMedium,
-              ),
+              Text(nextMilestone, style: textTheme.bodyMedium),
             ],
           ),
         ),

@@ -268,4 +268,9 @@ class FakeSettingsRepository implements AppSettingsRepository {
   Future<void> saveNotificationsEnabled(bool enabled) async {
     _settings = _settings.copyWith(notificationsEnabled: enabled);
   }
+
+  @override
+  Future<void> resetSettings() async {
+    _settings = const AppSettings();
+  }
 }

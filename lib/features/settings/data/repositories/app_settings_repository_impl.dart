@@ -58,4 +58,9 @@ class AppSettingsRepositoryImpl implements AppSettingsRepository {
   Future<void> saveNotificationsEnabled(bool enabled) {
     return _localDataSource.saveNotificationsEnabled(enabled);
   }
+
+  @override
+  Future<void> resetSettings() {
+    return _localDataSource.resetSettings();
+  }
 }
