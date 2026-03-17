@@ -10,6 +10,15 @@ enum AppDestination {
     selectedIcon: Icons.dashboard_rounded,
     pageStorageKey: 'today-tab',
   ),
+  map(
+    route: '/map',
+    label: 'Карта',
+    title: 'Карта',
+    summary: 'Стартовый картографический экран Москвы и будущих мест на день.',
+    icon: Icons.map_outlined,
+    selectedIcon: Icons.map_rounded,
+    pageStorageKey: 'map-tab',
+  ),
   calendar(
     route: '/calendar',
     label: 'Календарь',

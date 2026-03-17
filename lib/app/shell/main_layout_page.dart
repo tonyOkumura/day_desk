@@ -9,6 +9,7 @@ import '../../core/config/app_breakpoints.dart';
 import '../../features/availability/presentation/pages/availability_content_page.dart';
 import '../../features/calendar/presentation/pages/calendar_content_page.dart';
 import '../../features/dashboard/presentation/pages/dashboard_content_page.dart';
+import '../../features/map/presentation/pages/map_content_page.dart';
 import '../../features/settings/presentation/pages/settings_content_page.dart';
 import '../../features/tasks/presentation/pages/tasks_content_page.dart';
 import '../controllers/main_layout_controller.dart';
@@ -44,6 +45,11 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
         destination: AppDestination.today,
         focusNode: _controller.pageFocusNodeFor(AppDestination.today),
         child: const _KeepAliveTab(child: DashboardContentPage()),
+      ),
+      _PageFocusScope(
+        destination: AppDestination.map,
+        focusNode: _controller.pageFocusNodeFor(AppDestination.map),
+        child: const _KeepAliveTab(child: MapContentPage()),
       ),
       _PageFocusScope(
         destination: AppDestination.calendar,
@@ -189,22 +195,26 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
       const SingleActivator(LogicalKeyboardKey.digit1, control: true):
           const NavigateToDestinationIntent(AppDestination.today),
       const SingleActivator(LogicalKeyboardKey.digit2, control: true):
-          const NavigateToDestinationIntent(AppDestination.calendar),
+          const NavigateToDestinationIntent(AppDestination.map),
       const SingleActivator(LogicalKeyboardKey.digit3, control: true):
-          const NavigateToDestinationIntent(AppDestination.tasks),
+          const NavigateToDestinationIntent(AppDestination.calendar),
       const SingleActivator(LogicalKeyboardKey.digit4, control: true):
-          const NavigateToDestinationIntent(AppDestination.availability),
+          const NavigateToDestinationIntent(AppDestination.tasks),
       const SingleActivator(LogicalKeyboardKey.digit5, control: true):
+          const NavigateToDestinationIntent(AppDestination.availability),
+      const SingleActivator(LogicalKeyboardKey.digit6, control: true):
           const NavigateToDestinationIntent(AppDestination.settings),
       const SingleActivator(LogicalKeyboardKey.digit1, meta: true):
           const NavigateToDestinationIntent(AppDestination.today),
       const SingleActivator(LogicalKeyboardKey.digit2, meta: true):
-          const NavigateToDestinationIntent(AppDestination.calendar),
+          const NavigateToDestinationIntent(AppDestination.map),
       const SingleActivator(LogicalKeyboardKey.digit3, meta: true):
-          const NavigateToDestinationIntent(AppDestination.tasks),
+          const NavigateToDestinationIntent(AppDestination.calendar),
       const SingleActivator(LogicalKeyboardKey.digit4, meta: true):
-          const NavigateToDestinationIntent(AppDestination.availability),
+          const NavigateToDestinationIntent(AppDestination.tasks),
       const SingleActivator(LogicalKeyboardKey.digit5, meta: true):
+          const NavigateToDestinationIntent(AppDestination.availability),
+      const SingleActivator(LogicalKeyboardKey.digit6, meta: true):
           const NavigateToDestinationIntent(AppDestination.settings),
       const SingleActivator(LogicalKeyboardKey.keyB, control: true):
           const ToggleSidebarIntent(),
@@ -306,7 +316,7 @@ class _CompactMainLayout extends StatelessWidget {
         controller: controller,
         currentDestination: currentDestination,
         pages: pages,
-        swipeEnabled: true,
+        swipeEnabled: currentDestination != AppDestination.map,
       ),
     );
   }
@@ -431,17 +441,22 @@ class _CompactNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool useDenseTabLayout = AppDestination.values.length > 5;
     final bool useCompactDensity =
         MediaQuery.sizeOf(context).width < AppBreakpoints.compactDensity;
     final double outerHorizontalPadding = useCompactDensity
-        ? AppSpacing.md
+        ? (useDenseTabLayout ? AppSpacing.sm : AppSpacing.md)
         : AppSpacing.lg;
     final double outerBottomPadding = useCompactDensity
         ? AppSpacing.md
         : AppSpacing.lg;
-    final double iconSize = useCompactDensity ? 22 : 24;
+    final double iconSize = useCompactDensity
+        ? (useDenseTabLayout ? 20 : 22)
+        : 24;
     final EdgeInsets tabPadding = EdgeInsets.symmetric(
-      horizontal: useCompactDensity ? AppSpacing.sm : AppSpacing.md,
+      horizontal: useCompactDensity
+          ? (useDenseTabLayout ? 6 : AppSpacing.sm)
+          : AppSpacing.md,
       vertical: useCompactDensity ? AppSpacing.sm : AppSpacing.md,
     );
 
@@ -464,7 +479,9 @@ class _CompactNavigationBar extends StatelessWidget {
           iconSize: iconSize,
           padding: tabPadding,
           tabMargin: EdgeInsets.symmetric(
-            horizontal: useCompactDensity ? 2 : AppSpacing.xs,
+            horizontal: useCompactDensity
+                ? (useDenseTabLayout ? 1 : 2)
+                : AppSpacing.xs,
           ),
           backgroundColor: Colors.transparent,
           tabBackgroundColor: AppNavigationTheme.gNavTabBackground(context),

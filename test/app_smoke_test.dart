@@ -2,9 +2,11 @@ import 'package:day_desk/app/controllers/main_layout_controller.dart';
 import 'package:day_desk/app/controllers/theme_controller.dart';
 import 'package:day_desk/app/navigation/app_destination.dart';
 import 'package:day_desk/app/routes/app_routes.dart';
+import 'package:day_desk/features/map/presentation/controllers/places_map_controller.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
@@ -35,6 +37,25 @@ void main() {
     expect(find.text('Главный экран дня'), findsOneWidget);
   });
 
+  testWidgets('прямой запуск маршрута /map открывает вкладку карты', (
+    WidgetTester tester,
+  ) async {
+    final AppTestHarness harness = await AppTestHarness.bootstrap();
+    addTearDown(() async => harness.dispose());
+
+    AppTestHarness.setSurfaceSize(tester, size: const Size(390, 844));
+    addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+    await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.map);
+
+    final MainLayoutController controller = Get.find<MainLayoutController>();
+
+    expect(controller.currentDestination, AppDestination.map);
+    expect(find.text('Карта'), findsWidgets);
+    expect(find.byType(FlutterMap), findsOneWidget);
+    expect(find.text('Карта дня'), findsOneWidget);
+  });
+
   testWidgets('на узком экране используется google nav bar', (
     WidgetTester tester,
   ) async {
@@ -48,6 +69,7 @@ void main() {
 
     expect(find.byType(GNav), findsOneWidget);
     expect(find.byType(SidebarX), findsNothing);
+    expect(find.byKey(const Key('compact-nav-map')), findsOneWidget);
   });
 
   testWidgets('на широком экране используется sidebarx', (
@@ -83,6 +105,24 @@ void main() {
     expect(find.text('Задачи'), findsWidgets);
     expect(find.text('Модуль задач'), findsOneWidget);
   });
+
+  testWidgets(
+    'на широком экране карта показывает split view с панелью и картой',
+    (WidgetTester tester) async {
+      final AppTestHarness harness = await AppTestHarness.bootstrap();
+      addTearDown(() async => harness.dispose());
+
+      AppTestHarness.setSurfaceSize(tester, size: const Size(1440, 960));
+      addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+      await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.map);
+
+      expect(find.byType(FlutterMap), findsOneWidget);
+      expect(find.text('Карта дня'), findsOneWidget);
+      expect(find.textContaining('Стартовая область: Москва'), findsWidgets);
+      expect(find.byKey(const Key('map-recenter-button')), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'тап по нижней навигации и свайп синхронизируют текущую вкладку',
@@ -220,7 +260,7 @@ void main() {
   });
 
   testWidgets(
-    'Ctrl+3 переключает раздел и переводит фокус на активную страницу',
+    'Ctrl+2 переключает на карту и переводит фокус на активную страницу',
     (WidgetTester tester) async {
       final AppTestHarness harness = await AppTestHarness.bootstrap();
       addTearDown(() async => harness.dispose());
@@ -232,17 +272,17 @@ void main() {
 
       final MainLayoutController controller = Get.find<MainLayoutController>();
 
-      await _sendControlShortcut(tester, LogicalKeyboardKey.digit3);
+      await _sendControlShortcut(tester, LogicalKeyboardKey.digit2);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
-      final Focus tasksFocus = tester.widget<Focus>(
-        find.byKey(const Key('page-focus-tasks')),
+      final Focus mapFocus = tester.widget<Focus>(
+        find.byKey(const Key('page-focus-map')),
       );
 
-      expect(controller.currentDestination, AppDestination.tasks);
-      expect(controller.currentRoutePath, AppDestination.tasks.route);
-      expect(tasksFocus.focusNode?.hasPrimaryFocus, isTrue);
+      expect(controller.currentDestination, AppDestination.map);
+      expect(controller.currentRoutePath, AppDestination.map.route);
+      expect(mapFocus.focusNode?.hasPrimaryFocus, isTrue);
     },
   );
 
@@ -287,7 +327,7 @@ void main() {
 
     await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.today);
 
-    await _sendControlShortcut(tester, LogicalKeyboardKey.digit3);
+    await _sendControlShortcut(tester, LogicalKeyboardKey.digit4);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -324,6 +364,52 @@ void main() {
       expect(find.text('Сегодня'), findsWidgets);
     }
   });
+
+  testWidgets('drag по карте на compact layout не переключает PageView', (
+    WidgetTester tester,
+  ) async {
+    final AppTestHarness harness = await AppTestHarness.bootstrap();
+    addTearDown(() async => harness.dispose());
+
+    AppTestHarness.setSurfaceSize(tester, size: const Size(390, 844));
+    addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+    await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.map);
+
+    final MainLayoutController controller = Get.find<MainLayoutController>();
+
+    await tester.drag(
+      find.byKey(const Key('map-interactive-surface')),
+      const Offset(-220, 0),
+      warnIfMissed: false,
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(controller.currentDestination, AppDestination.map);
+    expect(controller.currentRoutePath, AppDestination.map.route);
+  });
+
+  testWidgets(
+    'ошибка tile layer показывает fallback chip без падения страницы',
+    (WidgetTester tester) async {
+      final AppTestHarness harness = await AppTestHarness.bootstrap();
+      addTearDown(() async => harness.dispose());
+
+      AppTestHarness.setSurfaceSize(tester, size: const Size(390, 844));
+      addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+      await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.map);
+
+      final PlacesMapController controller = Get.find<PlacesMapController>();
+      controller.handleTileLayerError(Exception('tile test failure'));
+      await tester.pump();
+
+      expect(find.byKey(const Key('map-tile-error-chip')), findsOneWidget);
+      expect(find.text('Подложка карты временно недоступна'), findsOneWidget);
+      expect(find.byType(FlutterMap), findsOneWidget);
+    },
+  );
 
   testWidgets('desktop-scroll content получает scrollbar', (
     WidgetTester tester,
