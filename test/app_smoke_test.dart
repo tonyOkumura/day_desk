@@ -4,6 +4,7 @@ import 'package:day_desk/app/navigation/app_destination.dart';
 import 'package:day_desk/app/routes/app_routes.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_palette.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
@@ -18,16 +19,10 @@ void main() {
     final AppTestHarness harness = await AppTestHarness.bootstrap();
     addTearDown(() async => harness.dispose());
 
-    AppTestHarness.setSurfaceSize(
-      tester,
-      size: const Size(390, 844),
-    );
+    AppTestHarness.setSurfaceSize(tester, size: const Size(390, 844));
     addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
 
-    await harness.pumpAppWithRoute(
-      tester,
-      initialRoute: AppRoutes.today,
-    );
+    await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.today);
 
     final MainLayoutController controller = Get.find<MainLayoutController>();
     final ThemeController themeController = Get.find<ThemeController>();
@@ -44,10 +39,7 @@ void main() {
     final AppTestHarness harness = await AppTestHarness.bootstrap();
     addTearDown(() async => harness.dispose());
 
-    AppTestHarness.setSurfaceSize(
-      tester,
-      size: const Size(390, 844),
-    );
+    AppTestHarness.setSurfaceSize(tester, size: const Size(390, 844));
     addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
 
     await harness.pumpApp(tester);
@@ -62,10 +54,7 @@ void main() {
     final AppTestHarness harness = await AppTestHarness.bootstrap();
     addTearDown(() async => harness.dispose());
 
-    AppTestHarness.setSurfaceSize(
-      tester,
-      size: const Size(1440, 960),
-    );
+    AppTestHarness.setSurfaceSize(tester, size: const Size(1440, 960));
     addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
 
     await harness.pumpApp(tester);
@@ -81,16 +70,10 @@ void main() {
     final AppTestHarness harness = await AppTestHarness.bootstrap();
     addTearDown(() async => harness.dispose());
 
-    AppTestHarness.setSurfaceSize(
-      tester,
-      size: const Size(390, 844),
-    );
+    AppTestHarness.setSurfaceSize(tester, size: const Size(390, 844));
     addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
 
-    await harness.pumpAppWithRoute(
-      tester,
-      initialRoute: AppRoutes.tasks,
-    );
+    await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.tasks);
 
     final MainLayoutController controller = Get.find<MainLayoutController>();
 
@@ -99,54 +82,47 @@ void main() {
     expect(find.text('Модуль задач'), findsOneWidget);
   });
 
-  testWidgets('тап по нижней навигации и свайп синхронизируют текущую вкладку', (
-    WidgetTester tester,
-  ) async {
-    final AppTestHarness harness = await AppTestHarness.bootstrap();
-    addTearDown(() async => harness.dispose());
+  testWidgets(
+    'тап по нижней навигации и свайп синхронизируют текущую вкладку',
+    (WidgetTester tester) async {
+      final AppTestHarness harness = await AppTestHarness.bootstrap();
+      addTearDown(() async => harness.dispose());
 
-    AppTestHarness.setSurfaceSize(
-      tester,
-      size: const Size(390, 844),
-    );
-    addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+      AppTestHarness.setSurfaceSize(tester, size: const Size(390, 844));
+      addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
 
-    await harness.pumpAppWithRoute(
-      tester,
-      initialRoute: AppRoutes.today,
-    );
+      await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.today);
 
-    final MainLayoutController controller = Get.find<MainLayoutController>();
+      final MainLayoutController controller = Get.find<MainLayoutController>();
 
-    await tester.tap(find.byIcon(Icons.checklist_rtl_outlined).first);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.byIcon(Icons.checklist_rtl_outlined).first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
 
-    expect(controller.currentDestination, AppDestination.tasks);
-    expect(controller.currentRoutePath, AppDestination.tasks.route);
-    expect(find.text('Модуль задач'), findsOneWidget);
+      expect(controller.currentDestination, AppDestination.tasks);
+      expect(controller.currentRoutePath, AppDestination.tasks.route);
+      expect(find.text('Модуль задач'), findsOneWidget);
 
-    await tester.drag(find.byType(PageView), const Offset(450, 0));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+      await tester.drag(find.byType(PageView), const Offset(450, 0));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-    expect(controller.currentDestination, AppDestination.calendar);
-    expect(controller.currentRoutePath, AppDestination.calendar.route);
-    expect(find.text('Модуль календаря'), findsOneWidget);
-  });
+      expect(controller.currentDestination, AppDestination.calendar);
+      expect(controller.currentRoutePath, AppDestination.calendar.route);
+      expect(find.text('Модуль календаря'), findsOneWidget);
+    },
+  );
 
   testWidgets('выбранные тема и палитра сохраняются между перезапусками', (
     WidgetTester tester,
   ) async {
     final FakeAppSettingsRepository repository = FakeAppSettingsRepository();
 
-    final AppTestHarness firstHarness =
-        await AppTestHarness.bootstrap(repository: repository);
-
-    AppTestHarness.setSurfaceSize(
-      tester,
-      size: const Size(390, 844),
+    final AppTestHarness firstHarness = await AppTestHarness.bootstrap(
+      repository: repository,
     );
+
+    AppTestHarness.setSurfaceSize(tester, size: const Size(390, 844));
     addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
 
     await firstHarness.pumpAppWithRoute(
@@ -169,8 +145,9 @@ void main() {
     await tester.pump();
     await firstHarness.dispose();
 
-    final AppTestHarness secondHarness =
-        await AppTestHarness.bootstrap(repository: repository);
+    final AppTestHarness secondHarness = await AppTestHarness.bootstrap(
+      repository: repository,
+    );
     addTearDown(() async => secondHarness.dispose());
 
     await secondHarness.pumpAppWithRoute(
@@ -181,4 +158,134 @@ void main() {
     expect(find.text('active_theme=light'), findsOneWidget);
     expect(find.text('active_palette=green'), findsOneWidget);
   });
+
+  testWidgets(
+    'Ctrl+3 переключает раздел и переводит фокус на активную страницу',
+    (WidgetTester tester) async {
+      final AppTestHarness harness = await AppTestHarness.bootstrap();
+      addTearDown(() async => harness.dispose());
+
+      AppTestHarness.setSurfaceSize(tester, size: const Size(1440, 960));
+      addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+      await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.today);
+
+      final MainLayoutController controller = Get.find<MainLayoutController>();
+
+      await _sendControlShortcut(tester, LogicalKeyboardKey.digit3);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      final Focus tasksFocus = tester.widget<Focus>(
+        find.byKey(const Key('page-focus-tasks')),
+      );
+
+      expect(controller.currentDestination, AppDestination.tasks);
+      expect(controller.currentRoutePath, AppDestination.tasks.route);
+      expect(tasksFocus.focusNode?.hasPrimaryFocus, isTrue);
+    },
+  );
+
+  testWidgets('Ctrl+B работает только в expanded layout', (
+    WidgetTester tester,
+  ) async {
+    final AppTestHarness harness = await AppTestHarness.bootstrap();
+    addTearDown(() async => harness.dispose());
+
+    AppTestHarness.setSurfaceSize(tester, size: const Size(1440, 960));
+    addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+    await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.today);
+
+    final MainLayoutController controller = Get.find<MainLayoutController>();
+
+    expect(controller.sidebarController.extended, isTrue);
+    await _sendControlShortcut(tester, LogicalKeyboardKey.keyB);
+    await tester.pump();
+
+    expect(controller.sidebarController.extended, isFalse);
+
+    AppTestHarness.setSurfaceSize(tester, size: const Size(700, 900));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.byType(GNav), findsOneWidget);
+    await _sendControlShortcut(tester, LogicalKeyboardKey.keyB);
+    await tester.pump();
+
+    expect(controller.sidebarController.extended, isFalse);
+  });
+
+  testWidgets('Escape снимает фокус с page anchor без побочных эффектов', (
+    WidgetTester tester,
+  ) async {
+    final AppTestHarness harness = await AppTestHarness.bootstrap();
+    addTearDown(() async => harness.dispose());
+
+    AppTestHarness.setSurfaceSize(tester, size: const Size(1440, 960));
+    addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+    await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.today);
+
+    await _sendControlShortcut(tester, LogicalKeyboardKey.digit3);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    final Finder tasksFocusFinder = find.byKey(const Key('page-focus-tasks'));
+    final Focus focusedPage = tester.widget<Focus>(tasksFocusFinder);
+    expect(focusedPage.focusNode?.hasPrimaryFocus, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+
+    final Focus unfocusedPage = tester.widget<Focus>(tasksFocusFinder);
+    expect(unfocusedPage.focusNode?.hasPrimaryFocus, isFalse);
+  });
+
+  testWidgets('узкие desktop-ширины не ломают shell и не дают overflow', (
+    WidgetTester tester,
+  ) async {
+    final AppTestHarness harness = await AppTestHarness.bootstrap();
+    addTearDown(() async => harness.dispose());
+
+    await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.today);
+
+    for (final Size size in <Size>[
+      const Size(1200, 900),
+      const Size(900, 900),
+      const Size(700, 900),
+      const Size(560, 900),
+    ]) {
+      AppTestHarness.setSurfaceSize(tester, size: size);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Сегодня'), findsWidgets);
+    }
+  });
+
+  testWidgets('desktop-scroll content получает scrollbar', (
+    WidgetTester tester,
+  ) async {
+    final AppTestHarness harness = await AppTestHarness.bootstrap();
+    addTearDown(() async => harness.dispose());
+
+    AppTestHarness.setSurfaceSize(tester, size: const Size(1440, 960));
+    addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+    await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.today);
+
+    expect(find.byType(Scrollbar), findsWidgets);
+  });
+}
+
+Future<void> _sendControlShortcut(
+  WidgetTester tester,
+  LogicalKeyboardKey key,
+) async {
+  await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+  await tester.sendKeyDownEvent(key);
+  await tester.sendKeyUpEvent(key);
+  await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
 }

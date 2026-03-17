@@ -12,6 +12,11 @@ class MainLayoutController extends GetxController {
   final Rx<AppDestination> _currentDestination = AppDestination.today.obs;
   final RxString _currentRoutePath = AppDestination.today.route.obs;
   final PageStorageBucket pageStorageBucket = PageStorageBucket();
+  final Map<AppDestination, FocusNode> _pageFocusNodes =
+      <AppDestination, FocusNode>{
+        for (final AppDestination destination in AppDestination.values)
+          destination: FocusNode(debugLabel: 'page-focus-${destination.name}'),
+      };
 
   late final PageController pageController;
   late final SidebarXController sidebarController;
@@ -21,6 +26,10 @@ class MainLayoutController extends GetxController {
   AppDestination get currentDestination => _currentDestination.value;
   String get currentRoutePath => _currentRoutePath.value;
   int get currentIndex => currentDestination.index;
+
+  FocusNode pageFocusNodeFor(AppDestination destination) {
+    return _pageFocusNodes[destination]!;
+  }
 
   void ensureInitialized(AppDestination initialDestination) {
     if (!_initialized) {
@@ -59,10 +68,14 @@ class MainLayoutController extends GetxController {
     AppDestination destination, {
     required bool animated,
     required bool syncRoute,
+    bool moveFocusToPage = false,
   }) async {
     if (destination == currentDestination) {
       if (syncRoute) {
         await _syncRoute(destination);
+      }
+      if (moveFocusToPage) {
+        requestPageFocus(destination);
       }
       return;
     }
@@ -84,12 +97,13 @@ class MainLayoutController extends GetxController {
     if (syncRoute) {
       await _syncRoute(destination);
     }
+
+    if (moveFocusToPage) {
+      requestPageFocus(destination);
+    }
   }
 
-  Future<void> handlePageChanged(
-    int index, {
-    required bool syncRoute,
-  }) async {
+  Future<void> handlePageChanged(int index, {required bool syncRoute}) async {
     final AppDestination destination = AppDestination.values[index];
     if (destination != currentDestination) {
       _updateSelection(destination);
@@ -101,11 +115,26 @@ class MainLayoutController extends GetxController {
   }
 
   void toggleSidebar() {
-    if (!_initialized) {
+    toggleSidebarForLayout(isExpandedLayout: true);
+  }
+
+  void toggleSidebarForLayout({required bool isExpandedLayout}) {
+    if (!_initialized || !isExpandedLayout) {
       return;
     }
 
     sidebarController.toggleExtended();
+  }
+
+  void requestPageFocus(AppDestination destination) {
+    final FocusNode focusNode = pageFocusNodeFor(destination);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (focusNode.context == null) {
+        return;
+      }
+
+      focusNode.requestFocus();
+    });
   }
 
   Future<void> _syncRoute(AppDestination destination) async {
@@ -133,6 +162,9 @@ class MainLayoutController extends GetxController {
     if (_initialized) {
       pageController.dispose();
       sidebarController.dispose();
+    }
+    for (final FocusNode focusNode in _pageFocusNodes.values) {
+      focusNode.dispose();
     }
     super.onClose();
   }

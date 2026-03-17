@@ -20,14 +20,8 @@ abstract final class AppNavigationTheme {
           ),
         ),
       ),
-      iconTheme: IconThemeData(
-        color: colorScheme.onSurfaceVariant,
-        size: 22,
-      ),
-      selectedIconTheme: IconThemeData(
-        color: colorScheme.primary,
-        size: 22,
-      ),
+      iconTheme: IconThemeData(color: colorScheme.onSurfaceVariant, size: 22),
+      selectedIconTheme: IconThemeData(color: colorScheme.primary, size: 22),
       textStyle: theme.textTheme.bodyMedium?.copyWith(
         color: colorScheme.onSurfaceVariant,
         fontWeight: FontWeight.w600,
@@ -61,10 +55,7 @@ abstract final class AppNavigationTheme {
         color: colorScheme.primary,
         fontWeight: FontWeight.w600,
       ),
-      hoverIconTheme: IconThemeData(
-        color: colorScheme.primary,
-        size: 22,
-      ),
+      hoverIconTheme: IconThemeData(color: colorScheme.primary, size: 22),
     );
   }
 
@@ -90,6 +81,14 @@ abstract final class AppNavigationTheme {
 
   static Color gNavTabBackground(BuildContext context) {
     return Theme.of(context).colorScheme.primary.withValues(alpha: 0.1);
+  }
+
+  static Color gNavHoverColor(BuildContext context) {
+    return Theme.of(context).colorScheme.primary.withValues(alpha: 0.06);
+  }
+
+  static Color gNavRippleColor(BuildContext context) {
+    return Theme.of(context).colorScheme.primary.withValues(alpha: 0.08);
   }
 
   static List<BoxShadow> gNavShadow(BuildContext context) {

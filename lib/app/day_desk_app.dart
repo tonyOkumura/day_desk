@@ -5,12 +5,10 @@ import 'package:get/get.dart';
 import 'controllers/theme_controller.dart';
 import 'routes/app_pages.dart';
 import 'theme/app_theme.dart';
+import 'theme/day_desk_scroll_behavior.dart';
 
 class DayDeskApp extends StatelessWidget {
-  const DayDeskApp({
-    this.initialRoute,
-    super.key,
-  });
+  const DayDeskApp({this.initialRoute, super.key});
 
   final String? initialRoute;
 
@@ -22,6 +20,7 @@ class DayDeskApp extends StatelessWidget {
       () => GetMaterialApp(
         title: 'Day Desk',
         debugShowCheckedModeBanner: false,
+        scrollBehavior: const DayDeskScrollBehavior(),
         themeMode: themeController.themeMode,
         theme: AppTheme.light(palette: themeController.palette),
         darkTheme: AppTheme.dark(palette: themeController.palette),
