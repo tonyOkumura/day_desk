@@ -54,7 +54,14 @@ class AppTestHarness {
   }
 
   Future<void> pumpApp(WidgetTester tester) async {
-    await tester.pumpWidget(const DayDeskApp());
+    await pumpAppWithRoute(tester);
+  }
+
+  Future<void> pumpAppWithRoute(
+    WidgetTester tester, {
+    String? initialRoute,
+  }) async {
+    await tester.pumpWidget(DayDeskApp(initialRoute: initialRoute));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
   }

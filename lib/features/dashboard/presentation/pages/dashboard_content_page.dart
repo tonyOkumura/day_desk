@@ -3,19 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../app/navigation/app_destination.dart';
-import '../../../../app/shell/app_shell.dart';
 import '../../../../app/shell/feature_placeholder_view.dart';
+import '../../../../app/shell/page_content_frame.dart';
 import '../controllers/dashboard_controller.dart';
 
-class DashboardPage extends GetView<DashboardController> {
-  const DashboardPage({super.key});
+class DashboardContentPage extends GetView<DashboardController> {
+  const DashboardContentPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return AppShell(
-      destination: AppDestination.today,
-      title: 'Сегодня',
-      summary: AppDestination.today.summary,
+    return PageContentFrame(
+      storageKey: AppDestination.today.pageStorageKey,
       child: FeaturePlaceholderView(
         title: 'Главный экран дня',
         summary: 'Здесь будет собираться единая картина дня: события, задачи, '

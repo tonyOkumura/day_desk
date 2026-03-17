@@ -2,7 +2,7 @@ import 'package:get/get.dart';
 
 import '../../features/settings/domain/repositories/app_settings_repository.dart';
 import '../bootstrap/app_startup_state.dart';
-import '../controllers/navigation_controller.dart';
+import '../controllers/main_layout_controller.dart';
 import '../controllers/theme_controller.dart';
 
 class AppBinding extends Bindings {
@@ -18,9 +18,9 @@ class AppBinding extends Bindings {
       );
     }
 
-    if (!Get.isRegistered<NavigationController>()) {
-      Get.put<NavigationController>(
-        NavigationController(),
+    if (!Get.isRegistered<MainLayoutController>()) {
+      Get.put<MainLayoutController>(
+        MainLayoutController(),
         permanent: true,
       );
     }

@@ -5,6 +5,11 @@ import '../presentation/controllers/tasks_controller.dart';
 class TasksBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<TasksController>(TasksController.new);
+    if (!Get.isRegistered<TasksController>()) {
+      Get.put<TasksController>(
+        TasksController(),
+        permanent: true,
+      );
+    }
   }
 }

@@ -1,68 +1,74 @@
 import 'package:flutter/material.dart';
 
-import '../routes/app_pages.dart';
-
 enum AppDestination {
-  today,
-  calendar,
-  tasks,
-  availability,
-  settings,
-}
+  today(
+    route: '/today',
+    label: 'Сегодня',
+    title: 'Сегодня',
+    summary: 'Главный сценарий дня и обзор текущего ритма.',
+    icon: Icons.dashboard_outlined,
+    selectedIcon: Icons.dashboard_rounded,
+    pageStorageKey: 'today-tab',
+  ),
+  calendar(
+    route: '/calendar',
+    label: 'Календарь',
+    title: 'Календарь',
+    summary: 'Навигация по датам и обзор плотности расписания.',
+    icon: Icons.calendar_month_outlined,
+    selectedIcon: Icons.calendar_month_rounded,
+    pageStorageKey: 'calendar-tab',
+  ),
+  tasks(
+    route: '/tasks',
+    label: 'Задачи',
+    title: 'Задачи',
+    summary: 'Будущий центр управления рабочими и личными задачами.',
+    icon: Icons.checklist_rtl_outlined,
+    selectedIcon: Icons.checklist_rtl_rounded,
+    pageStorageKey: 'tasks-tab',
+  ),
+  availability(
+    route: '/availability',
+    label: 'Свободное время',
+    title: 'Свободное время',
+    summary: 'Экран для понимания свободных окон и возможностей для встреч.',
+    icon: Icons.schedule_outlined,
+    selectedIcon: Icons.schedule_rounded,
+    pageStorageKey: 'availability-tab',
+  ),
+  settings(
+    route: '/settings',
+    label: 'Настройки',
+    title: 'Настройки',
+    summary: 'Базовые системные настройки приложения и визуальной среды.',
+    icon: Icons.tune_outlined,
+    selectedIcon: Icons.tune_rounded,
+    pageStorageKey: 'settings-tab',
+  );
 
-extension AppDestinationX on AppDestination {
-  String get route {
-    return switch (this) {
-      AppDestination.today => AppRoutes.today,
-      AppDestination.calendar => AppRoutes.calendar,
-      AppDestination.tasks => AppRoutes.tasks,
-      AppDestination.availability => AppRoutes.availability,
-      AppDestination.settings => AppRoutes.settings,
-    };
-  }
+  const AppDestination({
+    required this.route,
+    required this.label,
+    required this.title,
+    required this.summary,
+    required this.icon,
+    required this.selectedIcon,
+    required this.pageStorageKey,
+  });
 
-  String get label {
-    return switch (this) {
-      AppDestination.today => 'Сегодня',
-      AppDestination.calendar => 'Календарь',
-      AppDestination.tasks => 'Задачи',
-      AppDestination.availability => 'Свободное время',
-      AppDestination.settings => 'Настройки',
-    };
-  }
+  final String route;
+  final String label;
+  final String title;
+  final String summary;
+  final IconData icon;
+  final IconData selectedIcon;
+  final String pageStorageKey;
 
-  IconData get icon {
-    return switch (this) {
-      AppDestination.today => Icons.dashboard_outlined,
-      AppDestination.calendar => Icons.calendar_month_outlined,
-      AppDestination.tasks => Icons.checklist_rtl_outlined,
-      AppDestination.availability => Icons.schedule_outlined,
-      AppDestination.settings => Icons.tune_outlined,
-    };
-  }
-
-  IconData get selectedIcon {
-    return switch (this) {
-      AppDestination.today => Icons.dashboard_rounded,
-      AppDestination.calendar => Icons.calendar_month_rounded,
-      AppDestination.tasks => Icons.checklist_rtl_rounded,
-      AppDestination.availability => Icons.schedule_rounded,
-      AppDestination.settings => Icons.tune_rounded,
-    };
-  }
-
-  String get summary {
-    return switch (this) {
-      AppDestination.today =>
-        'Главный сценарий дня и обзор текущего ритма.',
-      AppDestination.calendar =>
-        'Навигация по датам и обзор плотности расписания.',
-      AppDestination.tasks =>
-        'Будущий центр управления рабочими и личными задачами.',
-      AppDestination.availability =>
-        'Экран для понимания свободных окон и возможностей для встреч.',
-      AppDestination.settings =>
-        'Базовые системные настройки приложения и визуальной среды.',
-    };
+  static AppDestination fromRoute(String route) {
+    return AppDestination.values.firstWhere(
+      (AppDestination destination) => destination.route == route,
+      orElse: () => AppDestination.today,
+    );
   }
 }

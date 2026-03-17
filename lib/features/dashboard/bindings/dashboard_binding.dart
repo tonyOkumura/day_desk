@@ -5,6 +5,11 @@ import '../presentation/controllers/dashboard_controller.dart';
 class DashboardBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<DashboardController>(DashboardController.new);
+    if (!Get.isRegistered<DashboardController>()) {
+      Get.put<DashboardController>(
+        DashboardController(),
+        permanent: true,
+      );
+    }
   }
 }

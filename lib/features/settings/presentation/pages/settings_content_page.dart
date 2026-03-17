@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 
 import '../../../../app/controllers/theme_controller.dart';
 import '../../../../app/navigation/app_destination.dart';
-import '../../../../app/shell/app_shell.dart';
+import '../../../../app/shell/page_content_frame.dart';
 import '../../../../app/theme/app_radii.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
@@ -12,18 +12,16 @@ import '../../../../core/widgets/app_surface_card.dart';
 import '../../domain/entities/app_theme_preference.dart';
 import '../controllers/settings_controller.dart';
 
-class SettingsPage extends GetView<SettingsController> {
-  const SettingsPage({super.key});
+class SettingsContentPage extends GetView<SettingsController> {
+  const SettingsContentPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final ThemeController themeController = Get.find<ThemeController>();
     final TextTheme textTheme = Theme.of(context).textTheme;
 
-    return AppShell(
-      destination: AppDestination.settings,
-      title: 'Настройки',
-      summary: AppDestination.settings.summary,
+    return PageContentFrame(
+      storageKey: AppDestination.settings.pageStorageKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -77,7 +75,7 @@ class SettingsPage extends GetView<SettingsController> {
                 const SizedBox(height: AppSpacing.md),
                 Text(
                   'Локальное хранилище на Isar уже инициализируется при старте '
-                  'приложения, а app shell и маршрутизация готовы для Sprint 1.',
+                  'приложения, а main layout и маршрутизация готовы для Sprint 1.',
                   style: textTheme.bodyMedium,
                 ),
                 const SizedBox(height: AppSpacing.lg),

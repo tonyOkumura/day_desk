@@ -7,7 +7,12 @@ import 'routes/app_pages.dart';
 import 'theme/app_theme.dart';
 
 class DayDeskApp extends StatelessWidget {
-  const DayDeskApp({super.key});
+  const DayDeskApp({
+    this.initialRoute,
+    super.key,
+  });
+
+  final String? initialRoute;
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +25,7 @@ class DayDeskApp extends StatelessWidget {
         themeMode: themeController.themeMode,
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
-        initialRoute: AppPages.initial,
+        initialRoute: initialRoute ?? AppPages.initial,
         getPages: AppPages.routes,
       ),
     );

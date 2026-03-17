@@ -3,19 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../app/navigation/app_destination.dart';
-import '../../../../app/shell/app_shell.dart';
 import '../../../../app/shell/feature_placeholder_view.dart';
+import '../../../../app/shell/page_content_frame.dart';
 import '../controllers/availability_controller.dart';
 
-class AvailabilityPage extends GetView<AvailabilityController> {
-  const AvailabilityPage({super.key});
+class AvailabilityContentPage extends GetView<AvailabilityController> {
+  const AvailabilityContentPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return AppShell(
-      destination: AppDestination.availability,
-      title: 'Свободное время',
-      summary: AppDestination.availability.summary,
+    return PageContentFrame(
+      storageKey: AppDestination.availability.pageStorageKey,
       child: FeaturePlaceholderView(
         title: 'Свободные окна',
         summary: 'Здесь позже появится ответ на ключевой вопрос пользователя: '
