@@ -18,22 +18,42 @@ const AppSettingsLocalModelSchema = CollectionSchema(
   name: r'AppSettingsLocalModel',
   id: -7711851287718184256,
   properties: {
-    r'themePalette': PropertySchema(
+    r'minimumFreeSlotMinutes': PropertySchema(
       id: 0,
+      name: r'minimumFreeSlotMinutes',
+      type: IsarType.long,
+    ),
+    r'notificationsEnabled': PropertySchema(
+      id: 1,
+      name: r'notificationsEnabled',
+      type: IsarType.bool,
+    ),
+    r'themePalette': PropertySchema(
+      id: 2,
       name: r'themePalette',
       type: IsarType.string,
       enumMap: _AppSettingsLocalModelthemePaletteEnumValueMap,
     ),
     r'themePreference': PropertySchema(
-      id: 1,
+      id: 3,
       name: r'themePreference',
       type: IsarType.string,
       enumMap: _AppSettingsLocalModelthemePreferenceEnumValueMap,
     ),
     r'updatedAt': PropertySchema(
-      id: 2,
+      id: 4,
       name: r'updatedAt',
       type: IsarType.dateTime,
+    ),
+    r'workDayEndHour': PropertySchema(
+      id: 5,
+      name: r'workDayEndHour',
+      type: IsarType.long,
+    ),
+    r'workDayStartHour': PropertySchema(
+      id: 6,
+      name: r'workDayStartHour',
+      type: IsarType.long,
     )
   },
   estimateSize: _appSettingsLocalModelEstimateSize,
@@ -67,9 +87,13 @@ void _appSettingsLocalModelSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeString(offsets[0], object.themePalette.name);
-  writer.writeString(offsets[1], object.themePreference.name);
-  writer.writeDateTime(offsets[2], object.updatedAt);
+  writer.writeLong(offsets[0], object.minimumFreeSlotMinutes);
+  writer.writeBool(offsets[1], object.notificationsEnabled);
+  writer.writeString(offsets[2], object.themePalette.name);
+  writer.writeString(offsets[3], object.themePreference.name);
+  writer.writeDateTime(offsets[4], object.updatedAt);
+  writer.writeLong(offsets[5], object.workDayEndHour);
+  writer.writeLong(offsets[6], object.workDayStartHour);
 }
 
 AppSettingsLocalModel _appSettingsLocalModelDeserialize(
@@ -80,13 +104,17 @@ AppSettingsLocalModel _appSettingsLocalModelDeserialize(
 ) {
   final object = AppSettingsLocalModel();
   object.id = id;
+  object.minimumFreeSlotMinutes = reader.readLong(offsets[0]);
+  object.notificationsEnabled = reader.readBool(offsets[1]);
   object.themePalette = _AppSettingsLocalModelthemePaletteValueEnumMap[
-          reader.readStringOrNull(offsets[0])] ??
+          reader.readStringOrNull(offsets[2])] ??
       AppThemePalette.blue;
   object.themePreference = _AppSettingsLocalModelthemePreferenceValueEnumMap[
-          reader.readStringOrNull(offsets[1])] ??
+          reader.readStringOrNull(offsets[3])] ??
       AppThemePreference.system;
-  object.updatedAt = reader.readDateTime(offsets[2]);
+  object.updatedAt = reader.readDateTime(offsets[4]);
+  object.workDayEndHour = reader.readLong(offsets[5]);
+  object.workDayStartHour = reader.readLong(offsets[6]);
   return object;
 }
 
@@ -98,15 +126,23 @@ P _appSettingsLocalModelDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
+      return (reader.readLong(offset)) as P;
+    case 1:
+      return (reader.readBool(offset)) as P;
+    case 2:
       return (_AppSettingsLocalModelthemePaletteValueEnumMap[
               reader.readStringOrNull(offset)] ??
           AppThemePalette.blue) as P;
-    case 1:
+    case 3:
       return (_AppSettingsLocalModelthemePreferenceValueEnumMap[
               reader.readStringOrNull(offset)] ??
           AppThemePreference.system) as P;
-    case 2:
+    case 4:
       return (reader.readDateTime(offset)) as P;
+    case 5:
+      return (reader.readLong(offset)) as P;
+    case 6:
+      return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -282,6 +318,72 @@ extension AppSettingsLocalModelQueryFilter on QueryBuilder<
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> minimumFreeSlotMinutesEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'minimumFreeSlotMinutes',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> minimumFreeSlotMinutesGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'minimumFreeSlotMinutes',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> minimumFreeSlotMinutesLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'minimumFreeSlotMinutes',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> minimumFreeSlotMinutesBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'minimumFreeSlotMinutes',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> notificationsEnabledEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'notificationsEnabled',
+        value: value,
       ));
     });
   }
@@ -617,6 +719,118 @@ extension AppSettingsLocalModelQueryFilter on QueryBuilder<
       ));
     });
   }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> workDayEndHourEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'workDayEndHour',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> workDayEndHourGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'workDayEndHour',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> workDayEndHourLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'workDayEndHour',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> workDayEndHourBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'workDayEndHour',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> workDayStartHourEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'workDayStartHour',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> workDayStartHourGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'workDayStartHour',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> workDayStartHourLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'workDayStartHour',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> workDayStartHourBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'workDayStartHour',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
 }
 
 extension AppSettingsLocalModelQueryObject on QueryBuilder<
@@ -627,6 +841,34 @@ extension AppSettingsLocalModelQueryLinks on QueryBuilder<AppSettingsLocalModel,
 
 extension AppSettingsLocalModelQuerySortBy
     on QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QSortBy> {
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      sortByMinimumFreeSlotMinutes() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'minimumFreeSlotMinutes', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      sortByMinimumFreeSlotMinutesDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'minimumFreeSlotMinutes', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      sortByNotificationsEnabled() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'notificationsEnabled', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      sortByNotificationsEnabledDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'notificationsEnabled', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
       sortByThemePalette() {
     return QueryBuilder.apply(this, (query) {
@@ -668,6 +910,34 @@ extension AppSettingsLocalModelQuerySortBy
       return query.addSortBy(r'updatedAt', Sort.desc);
     });
   }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      sortByWorkDayEndHour() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'workDayEndHour', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      sortByWorkDayEndHourDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'workDayEndHour', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      sortByWorkDayStartHour() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'workDayStartHour', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      sortByWorkDayStartHourDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'workDayStartHour', Sort.desc);
+    });
+  }
 }
 
 extension AppSettingsLocalModelQuerySortThenBy
@@ -683,6 +953,34 @@ extension AppSettingsLocalModelQuerySortThenBy
       thenByIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      thenByMinimumFreeSlotMinutes() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'minimumFreeSlotMinutes', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      thenByMinimumFreeSlotMinutesDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'minimumFreeSlotMinutes', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      thenByNotificationsEnabled() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'notificationsEnabled', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      thenByNotificationsEnabledDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'notificationsEnabled', Sort.desc);
     });
   }
 
@@ -727,10 +1025,52 @@ extension AppSettingsLocalModelQuerySortThenBy
       return query.addSortBy(r'updatedAt', Sort.desc);
     });
   }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      thenByWorkDayEndHour() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'workDayEndHour', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      thenByWorkDayEndHourDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'workDayEndHour', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      thenByWorkDayStartHour() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'workDayStartHour', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      thenByWorkDayStartHourDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'workDayStartHour', Sort.desc);
+    });
+  }
 }
 
 extension AppSettingsLocalModelQueryWhereDistinct
     on QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QDistinct> {
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QDistinct>
+      distinctByMinimumFreeSlotMinutes() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'minimumFreeSlotMinutes');
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QDistinct>
+      distinctByNotificationsEnabled() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'notificationsEnabled');
+    });
+  }
+
   QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QDistinct>
       distinctByThemePalette({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -752,6 +1092,20 @@ extension AppSettingsLocalModelQueryWhereDistinct
       return query.addDistinctBy(r'updatedAt');
     });
   }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QDistinct>
+      distinctByWorkDayEndHour() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'workDayEndHour');
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QDistinct>
+      distinctByWorkDayStartHour() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'workDayStartHour');
+    });
+  }
 }
 
 extension AppSettingsLocalModelQueryProperty on QueryBuilder<
@@ -759,6 +1113,20 @@ extension AppSettingsLocalModelQueryProperty on QueryBuilder<
   QueryBuilder<AppSettingsLocalModel, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, int, QQueryOperations>
+      minimumFreeSlotMinutesProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'minimumFreeSlotMinutes');
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, bool, QQueryOperations>
+      notificationsEnabledProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'notificationsEnabled');
     });
   }
 
@@ -780,6 +1148,20 @@ extension AppSettingsLocalModelQueryProperty on QueryBuilder<
       updatedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'updatedAt');
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, int, QQueryOperations>
+      workDayEndHourProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'workDayEndHour');
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, int, QQueryOperations>
+      workDayStartHourProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'workDayStartHour');
     });
   }
 }

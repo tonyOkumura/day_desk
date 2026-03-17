@@ -25,6 +25,28 @@ class AppSettingsLocalDataSource {
     });
   }
 
+  Future<void> saveWorkDayBounds({
+    required int startHour,
+    required int endHour,
+  }) async {
+    await _saveSettings((AppSettingsLocalModel settings) {
+      settings.workDayStartHour = startHour;
+      settings.workDayEndHour = endHour;
+    });
+  }
+
+  Future<void> saveMinimumFreeSlotMinutes(int minutes) async {
+    await _saveSettings((AppSettingsLocalModel settings) {
+      settings.minimumFreeSlotMinutes = minutes;
+    });
+  }
+
+  Future<void> saveNotificationsEnabled(bool enabled) async {
+    await _saveSettings((AppSettingsLocalModel settings) {
+      settings.notificationsEnabled = enabled;
+    });
+  }
+
   Future<void> _saveSettings(
     void Function(AppSettingsLocalModel settings) update,
   ) async {

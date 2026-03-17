@@ -1,5 +1,6 @@
 import 'package:isar/isar.dart';
 
+import '../../domain/entities/app_settings.dart';
 import '../../domain/entities/app_theme_palette.dart';
 import '../../domain/entities/app_theme_preference.dart';
 
@@ -18,6 +19,14 @@ class AppSettingsLocalModel {
 
   @Enumerated(EnumType.name)
   AppThemePalette themePalette = AppThemePalette.blue;
+
+  int workDayStartHour = AppSettings.defaultWorkDayStartHour;
+
+  int workDayEndHour = AppSettings.defaultWorkDayEndHour;
+
+  int minimumFreeSlotMinutes = AppSettings.defaultMinimumFreeSlotMinutes;
+
+  bool notificationsEnabled = AppSettings.defaultNotificationsEnabled;
 
   DateTime updatedAt = DateTime.now();
 }

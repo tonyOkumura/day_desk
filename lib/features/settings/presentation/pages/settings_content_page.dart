@@ -8,6 +8,7 @@ import '../../../../app/shell/page_content_frame.dart';
 import '../../../../app/theme/app_radii.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/date/app_date_formatter.dart';
 import '../../../../core/widgets/app_surface_card.dart';
 import '../../domain/entities/app_theme_palette.dart';
 import '../../domain/entities/app_theme_preference.dart';
@@ -19,7 +20,9 @@ class SettingsContentPage extends GetView<SettingsController> {
   @override
   Widget build(BuildContext context) {
     final ThemeController themeController = Get.find<ThemeController>();
+    final AppDateFormatter formatter = Get.find<AppDateFormatter>();
     final TextTheme textTheme = Theme.of(context).textTheme;
+    final DateTime now = DateTime.now();
 
     return PageContentFrame(
       storageKey: AppDestination.settings.pageStorageKey,
@@ -68,6 +71,150 @@ class SettingsContentPage extends GetView<SettingsController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
+                  'Рабочий день',
+                  style: textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Эти значения станут базой для будущих расчётов свободных '
+                  'окон и дневного ритма.',
+                  style: textTheme.bodyLarge,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Obx(
+                  () => Wrap(
+                    spacing: AppSpacing.lg,
+                    runSpacing: AppSpacing.lg,
+                    children: <Widget>[
+                      _SettingsDropdownField(
+                        fieldKey: const Key('work-day-start-dropdown'),
+                        label: 'Начало дня',
+                        value: controller.workDayStartHour,
+                        items: controller.availableStartHourOptions
+                            .map(
+                              (int hour) => DropdownMenuItem<int>(
+                                value: hour,
+                                child: Text(
+                                  formatter.formatHourOfDay(hour),
+                                  key: Key('work-day-start-option-$hour'),
+                                ),
+                              ),
+                            )
+                            .toList(growable: false),
+                        onChanged: (int? hour) {
+                          if (hour == null) {
+                            return;
+                          }
+
+                          controller.setWorkDayStartHour(hour);
+                        },
+                      ),
+                      _SettingsDropdownField(
+                        fieldKey: const Key('work-day-end-dropdown'),
+                        label: 'Конец дня',
+                        value: controller.workDayEndHour,
+                        items: controller.availableEndHourOptions
+                            .map(
+                              (int hour) => DropdownMenuItem<int>(
+                                value: hour,
+                                child: Text(
+                                  formatter.formatHourOfDay(hour),
+                                  key: Key('work-day-end-option-$hour'),
+                                ),
+                              ),
+                            )
+                            .toList(growable: false),
+                        onChanged: (int? hour) {
+                          if (hour == null) {
+                            return;
+                          }
+
+                          controller.setWorkDayEndHour(hour);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          AppSurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Свободные окна и напоминания',
+                  style: textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Foundation-настройки уже можно подготовить заранее, даже '
+                  'до появления задач, событий и системных reminder-ов.',
+                  style: textTheme.bodyLarge,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Obx(
+                  () => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      _SettingsDropdownField(
+                        fieldKey: const Key('minimum-free-slot-dropdown'),
+                        label: 'Минимальное свободное окно',
+                        value: controller.minimumFreeSlotMinutes,
+                        items: SettingsController.freeSlotDurationOptions
+                            .map(
+                              (int minutes) => DropdownMenuItem<int>(
+                                value: minutes,
+                                child: Text(
+                                  '$minutes мин',
+                                  key: Key('minimum-free-slot-option-$minutes'),
+                                ),
+                              ),
+                            )
+                            .toList(growable: false),
+                        onChanged: (int? minutes) {
+                          if (minutes == null) {
+                            return;
+                          }
+
+                          controller.setMinimumFreeSlotMinutes(minutes);
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      SwitchListTile.adaptive(
+                        key: const Key('notifications-enabled-switch'),
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          'Напоминания включены',
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Это preference для будущих локальных уведомлений. '
+                          'Текущие in-app системные подсказки не отключаются.',
+                          style: textTheme.bodyMedium,
+                        ),
+                        value: controller.notificationsEnabled,
+                        onChanged: controller.setNotificationsEnabled,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          AppSurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
                   'Палитра',
                   style: textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
@@ -88,8 +235,7 @@ class SettingsContentPage extends GetView<SettingsController> {
                         .map(
                           (AppThemePalette palette) => _PaletteCard(
                             palette: palette,
-                            isSelected:
-                                themeController.palette == palette,
+                            isSelected: themeController.palette == palette,
                             onTap: () => controller.selectPalette(palette),
                           ),
                         )
@@ -113,8 +259,9 @@ class SettingsContentPage extends GetView<SettingsController> {
                 const SizedBox(height: AppSpacing.md),
                 Text(
                   'Локальное хранилище на Isar уже инициализируется при старте '
-                  'приложения, а palette-aware theme system уже подключён к '
-                  'main layout и настройкам.',
+                  'приложения, а palette-aware theme system и foundation для '
+                  'дат, времени и локальных настроек уже подключены к main '
+                  'layout и настройкам.',
                   style: textTheme.bodyMedium,
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -127,10 +274,94 @@ class SettingsContentPage extends GetView<SettingsController> {
                   'active_palette=${themeController.palette.name}',
                   style: AppTypography.mono(context),
                 ),
+                const SizedBox(height: AppSpacing.sm),
+                Obx(
+                  () => Text(
+                    'work_day='
+                    '${formatter.formatHourOfDay(controller.workDayStartHour)}'
+                    '-${formatter.formatHourOfDay(controller.workDayEndHour)}',
+                    style: AppTypography.mono(context),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Obx(
+                  () => Text(
+                    'minimum_free_slot='
+                    '${controller.minimumFreeSlotMinutes}',
+                    style: AppTypography.mono(context),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Obx(
+                  () => Text(
+                    'notifications_enabled='
+                    '${controller.notificationsEnabled}',
+                    style: AppTypography.mono(context),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  'Примеры форматирования',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  formatter.formatFullDate(now),
+                  style: AppTypography.mono(context),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  formatter.formatTime(now),
+                  style: AppTypography.mono(context),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  formatter.formatRelativeDay(
+                    now.add(const Duration(days: 1)),
+                    reference: now,
+                  ),
+                  style: AppTypography.mono(context),
+                ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SettingsDropdownField extends StatelessWidget {
+  const _SettingsDropdownField({
+    required this.fieldKey,
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final Key fieldKey;
+  final String label;
+  final int value;
+  final List<DropdownMenuItem<int>> items;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 220, maxWidth: 320),
+      child: KeyedSubtree(
+        key: fieldKey,
+        child: DropdownButtonFormField<int>(
+          key: ValueKey<String>('${label}_$value'),
+          initialValue: value,
+          isExpanded: true,
+          decoration: InputDecoration(labelText: label),
+          items: items,
+          onChanged: onChanged,
+        ),
       ),
     );
   }
@@ -178,9 +409,9 @@ class _ThemeCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.lg),
               Text(
                 preference.label,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
@@ -256,9 +487,9 @@ class _PaletteCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.lg),
               Text(
                 palette.label,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(

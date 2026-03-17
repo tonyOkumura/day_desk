@@ -26,9 +26,11 @@ void main() {
 
     final MainLayoutController controller = Get.find<MainLayoutController>();
     final ThemeController themeController = Get.find<ThemeController>();
+    final BuildContext context = tester.element(find.text('Сегодня').first);
 
     expect(controller.currentDestination, AppDestination.today);
     expect(themeController.palette, AppThemePalette.blue);
+    expect(Localizations.localeOf(context), const Locale('ru', 'RU'));
     expect(find.text('Сегодня'), findsWidgets);
     expect(find.text('Главный экран дня'), findsOneWidget);
   });
@@ -113,50 +115,108 @@ void main() {
     },
   );
 
-  testWidgets('выбранные тема и палитра сохраняются между перезапусками', (
+  testWidgets(
+    'выбранные тема, палитра и foundation-настройки сохраняются между перезапусками',
+    (WidgetTester tester) async {
+      final FakeAppSettingsRepository repository = FakeAppSettingsRepository();
+
+      final AppTestHarness firstHarness = await AppTestHarness.bootstrap(
+        repository: repository,
+      );
+
+      AppTestHarness.setSurfaceSize(tester, size: const Size(390, 844));
+      addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+      await firstHarness.pumpAppWithRoute(
+        tester,
+        initialRoute: AppRoutes.settings,
+      );
+
+      final Finder lightThemeCard = find.widgetWithText(InkWell, 'Светлая');
+      final Finder greenPaletteCard = find.widgetWithText(InkWell, 'Зелёная');
+      await tester.ensureVisible(lightThemeCard);
+      await tester.tap(lightThemeCard);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.ensureVisible(greenPaletteCard);
+      await tester.tap(greenPaletteCard);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      await tester.ensureVisible(
+        find.byKey(const Key('work-day-start-dropdown')),
+      );
+      await tester.tap(find.byKey(const Key('work-day-start-dropdown')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('work-day-start-option-8')).last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('work-day-end-dropdown')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('work-day-end-option-19')).last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('minimum-free-slot-dropdown')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('minimum-free-slot-option-45')).last,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(
+        find.byKey(const Key('notifications-enabled-switch')),
+      );
+      await tester.tap(find.byKey(const Key('notifications-enabled-switch')));
+      await tester.pumpAndSettle();
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await firstHarness.dispose();
+
+      final AppTestHarness secondHarness = await AppTestHarness.bootstrap(
+        repository: repository,
+      );
+      addTearDown(() async => secondHarness.dispose());
+
+      await secondHarness.pumpAppWithRoute(
+        tester,
+        initialRoute: AppRoutes.settings,
+      );
+
+      expect(find.text('active_theme=light'), findsOneWidget);
+      expect(find.text('active_palette=green'), findsOneWidget);
+      expect(find.text('work_day=08:00-19:00'), findsOneWidget);
+      expect(find.text('minimum_free_slot=45'), findsOneWidget);
+      expect(find.text('notifications_enabled=false'), findsOneWidget);
+    },
+  );
+
+  testWidgets('dropdown options не позволяют выбрать невалидные границы дня', (
     WidgetTester tester,
   ) async {
-    final FakeAppSettingsRepository repository = FakeAppSettingsRepository();
-
-    final AppTestHarness firstHarness = await AppTestHarness.bootstrap(
-      repository: repository,
-    );
+    final AppTestHarness harness = await AppTestHarness.bootstrap();
+    addTearDown(() async => harness.dispose());
 
     AppTestHarness.setSurfaceSize(tester, size: const Size(390, 844));
     addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
 
-    await firstHarness.pumpAppWithRoute(
-      tester,
-      initialRoute: AppRoutes.settings,
+    await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.settings);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('work-day-start-dropdown')),
     );
+    await tester.tap(find.byKey(const Key('work-day-start-dropdown')));
+    await tester.pumpAndSettle();
 
-    final Finder lightThemeCard = find.widgetWithText(InkWell, 'Светлая');
-    final Finder greenPaletteCard = find.widgetWithText(InkWell, 'Зелёная');
-    await tester.ensureVisible(lightThemeCard);
-    await tester.tap(lightThemeCard);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 250));
-    await tester.ensureVisible(greenPaletteCard);
-    await tester.tap(greenPaletteCard);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 250));
+    expect(find.byKey(const Key('work-day-start-option-18')), findsNothing);
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-    await firstHarness.dispose();
+    await tester.tap(find.byKey(const Key('work-day-start-option-8')).last);
+    await tester.pumpAndSettle();
 
-    final AppTestHarness secondHarness = await AppTestHarness.bootstrap(
-      repository: repository,
-    );
-    addTearDown(() async => secondHarness.dispose());
+    await tester.tap(find.byKey(const Key('work-day-end-dropdown')));
+    await tester.pumpAndSettle();
 
-    await secondHarness.pumpAppWithRoute(
-      tester,
-      initialRoute: AppRoutes.settings,
-    );
-
-    expect(find.text('active_theme=light'), findsOneWidget);
-    expect(find.text('active_palette=green'), findsOneWidget);
+    expect(find.byKey(const Key('work-day-end-option-8')), findsNothing);
   });
 
   testWidgets(

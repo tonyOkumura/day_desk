@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:isar/isar.dart';
 
+import '../../core/date/app_date_formatter.dart';
 import '../../core/errors/app_error_handler.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/storage/app_database.dart';
@@ -12,6 +15,7 @@ import '../../core/storage/app_directories.dart';
 import '../../features/settings/data/datasources/app_settings_local_data_source.dart';
 import '../../features/settings/data/models/app_settings_local_model.dart';
 import '../../features/settings/data/repositories/app_settings_repository_impl.dart';
+import '../../features/settings/domain/entities/app_settings.dart';
 import '../../features/settings/domain/repositories/app_settings_repository.dart';
 import '../bindings/app_binding.dart';
 import '../day_desk_app.dart';
@@ -22,6 +26,8 @@ class AppBootstrap {
 
   static Future<void> run() async {
     WidgetsFlutterBinding.ensureInitialized();
+    Intl.defaultLocale = AppDateFormatter.localeName;
+    await initializeDateFormatting(AppDateFormatter.localeName);
 
     final AppLogger logger = AppLogger();
     Get.put<AppLogger>(logger, permanent: true);
@@ -41,7 +47,8 @@ class AppBootstrap {
           );
           runApp(
             BootstrapFailureApp(
-              message: 'Не удалось запустить Day Desk. Проверьте настройки '
+              message:
+                  'Не удалось запустить Day Desk. Проверьте настройки '
                   'окружения и повторите запуск.',
             ),
           );
@@ -73,9 +80,7 @@ class AppBootstrap {
 
     final AppDatabase database = AppDatabase(logger: logger);
     await database.open(
-      schemas: <CollectionSchema<dynamic>>[
-        AppSettingsLocalModelSchema,
-      ],
+      schemas: <CollectionSchema<dynamic>>[AppSettingsLocalModelSchema],
       directoryPath: resolvedDirectoryPath,
       name: 'day_desk',
     );
@@ -83,15 +88,15 @@ class AppBootstrap {
 
     final AppSettingsLocalDataSource localDataSource =
         AppSettingsLocalDataSource(database.isar);
-    final AppSettingsRepository settingsRepository =
-        AppSettingsRepositoryImpl(localDataSource);
+    final AppSettingsRepository settingsRepository = AppSettingsRepositoryImpl(
+      localDataSource,
+    );
     Get.put<AppSettingsRepository>(settingsRepository, permanent: true);
 
+    final AppSettings initialSettings = await settingsRepository.readSettings();
+
     final AppStartupState startupState = AppStartupState(
-      initialThemePreference:
-          await settingsRepository.readThemePreference(),
-      initialThemePalette:
-          await settingsRepository.readThemePalette(),
+      initialSettings: initialSettings,
     );
     Get.put<AppStartupState>(startupState, permanent: true);
 
@@ -108,10 +113,7 @@ class AppBootstrap {
 }
 
 class BootstrapFailureApp extends StatelessWidget {
-  const BootstrapFailureApp({
-    required this.message,
-    super.key,
-  });
+  const BootstrapFailureApp({required this.message, super.key});
 
   final String message;
 
