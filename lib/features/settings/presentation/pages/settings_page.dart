@@ -1,0 +1,154 @@
+import 'package:flutter/material.dart';
+
+import 'package:get/get.dart';
+
+import '../../../../app/controllers/theme_controller.dart';
+import '../../../../app/navigation/app_destination.dart';
+import '../../../../app/shell/app_shell.dart';
+import '../../../../app/theme/app_radii.dart';
+import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_typography.dart';
+import '../../../../core/widgets/app_surface_card.dart';
+import '../../domain/entities/app_theme_preference.dart';
+import '../controllers/settings_controller.dart';
+
+class SettingsPage extends GetView<SettingsController> {
+  const SettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeController themeController = Get.find<ThemeController>();
+    final TextTheme textTheme = Theme.of(context).textTheme;
+
+    return AppShell(
+      destination: AppDestination.settings,
+      title: 'Настройки',
+      summary: AppDestination.settings.summary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          AppSurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Тема приложения',
+                  style: textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Sprint 0 уже умеет сохранять визуальный режим. Это первая '
+                  'реальная пользовательская настройка в Day Desk.',
+                  style: textTheme.bodyLarge,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Obx(
+                  () => Wrap(
+                    spacing: AppSpacing.lg,
+                    runSpacing: AppSpacing.lg,
+                    children: controller.preferences
+                        .map(
+                          (AppThemePreference preference) => _ThemeCard(
+                            preference: preference,
+                            isSelected:
+                                themeController.preference == preference,
+                            onTap: () => controller.selectTheme(preference),
+                          ),
+                        )
+                        .toList(growable: false),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          AppSurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Фундамент уже готов',
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Локальное хранилище на Isar уже инициализируется при старте '
+                  'приложения, а app shell и маршрутизация готовы для Sprint 1.',
+                  style: textTheme.bodyMedium,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  'active_theme=${themeController.preference.name}',
+                  style: AppTypography.mono(context),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ThemeCard extends StatelessWidget {
+  const _ThemeCard({
+    required this.preference,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final AppThemePreference preference;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 220, maxWidth: 280),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            border: Border.all(
+              color: isSelected
+                  ? colorScheme.primary
+                  : colorScheme.outlineVariant.withValues(alpha: 0.5),
+              width: isSelected ? 1.6 : 1,
+            ),
+            color: isSelected
+                ? colorScheme.primary.withValues(alpha: 0.12)
+                : colorScheme.surface.withValues(alpha: 0.45),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Icon(preference.icon),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                preference.label,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                preference.description,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
