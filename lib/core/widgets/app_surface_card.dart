@@ -15,6 +15,7 @@ class AppSurfaceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       decoration: BoxDecoration(
@@ -25,7 +26,7 @@ class AppSurfaceCard extends StatelessWidget {
         ),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
+            color: colorScheme.shadow.withValues(alpha: isDark ? 0.24 : 0.1),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),

@@ -13,6 +13,7 @@ class AppBinding extends Bindings {
         ThemeController(
           repository: Get.find<AppSettingsRepository>(),
           initialPreference: Get.find<AppStartupState>().initialThemePreference,
+          initialPalette: Get.find<AppStartupState>().initialThemePalette,
         ),
         permanent: true,
       );

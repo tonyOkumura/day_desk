@@ -1,5 +1,6 @@
 import 'package:isar/isar.dart';
 
+import '../../domain/entities/app_theme_palette.dart';
 import '../../domain/entities/app_theme_preference.dart';
 
 part 'app_settings_local_model.g.dart';
@@ -14,6 +15,9 @@ class AppSettingsLocalModel {
 
   @Enumerated(EnumType.name)
   AppThemePreference themePreference = AppThemePreference.dark;
+
+  @Enumerated(EnumType.name)
+  AppThemePalette themePalette = AppThemePalette.blue;
 
   DateTime updatedAt = DateTime.now();
 }

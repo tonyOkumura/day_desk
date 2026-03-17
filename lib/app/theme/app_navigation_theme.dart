@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:sidebarx/sidebarx.dart';
 
-import 'app_colors.dart';
 import 'app_radii.dart';
 import 'app_spacing.dart';
 
@@ -104,17 +103,21 @@ abstract final class AppNavigationTheme {
   }
 
   static Gradient desktopBackground(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+    final bool isDark = theme.brightness == Brightness.dark;
 
     return LinearGradient(
       colors: isDark
-          ? const <Color>[
-              AppColors.graphite,
-              AppColors.nearBlack,
+          ? <Color>[
+              colorScheme.surface,
+              colorScheme.surfaceContainer,
+              colorScheme.surfaceContainerHighest,
             ]
-          : const <Color>[
-              AppColors.lightBackground,
-              AppColors.lightPanel,
+          : <Color>[
+              colorScheme.surfaceBright,
+              colorScheme.surfaceContainerLow,
+              colorScheme.surfaceContainerHigh,
             ],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,

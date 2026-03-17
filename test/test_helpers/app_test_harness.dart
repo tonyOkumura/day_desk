@@ -2,6 +2,7 @@ import 'package:day_desk/app/bindings/app_binding.dart';
 import 'package:day_desk/app/bootstrap/app_startup_state.dart';
 import 'package:day_desk/app/day_desk_app.dart';
 import 'package:day_desk/core/logging/app_logger.dart';
+import 'package:day_desk/features/settings/domain/entities/app_theme_palette.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_preference.dart';
 import 'package:day_desk/features/settings/domain/repositories/app_settings_repository.dart';
 import 'package:flutter/widgets.dart';
@@ -31,6 +32,8 @@ class AppTestHarness {
       AppStartupState(
         initialThemePreference:
             await resolvedRepository.readThemePreference(),
+        initialThemePalette:
+            await resolvedRepository.readThemePalette(),
       ),
       permanent: true,
     );
@@ -74,9 +77,12 @@ class AppTestHarness {
 class FakeAppSettingsRepository implements AppSettingsRepository {
   FakeAppSettingsRepository({
     AppThemePreference initialPreference = AppThemePreference.dark,
-  }) : _preference = initialPreference;
+    AppThemePalette initialPalette = AppThemePalette.blue,
+  })  : _preference = initialPreference,
+        _palette = initialPalette;
 
   AppThemePreference _preference;
+  AppThemePalette _palette;
 
   @override
   Future<AppThemePreference> readThemePreference() async {
@@ -84,7 +90,17 @@ class FakeAppSettingsRepository implements AppSettingsRepository {
   }
 
   @override
+  Future<AppThemePalette> readThemePalette() async {
+    return _palette;
+  }
+
+  @override
   Future<void> saveThemePreference(AppThemePreference preference) async {
     _preference = preference;
+  }
+
+  @override
+  Future<void> saveThemePalette(AppThemePalette palette) async {
+    _palette = palette;
   }
 }

@@ -88,6 +88,8 @@ class AppBootstrap {
     final AppStartupState startupState = AppStartupState(
       initialThemePreference:
           await settingsRepository.readThemePreference(),
+      initialThemePalette:
+          await settingsRepository.readThemePalette(),
     );
     Get.put<AppStartupState>(startupState, permanent: true);
 

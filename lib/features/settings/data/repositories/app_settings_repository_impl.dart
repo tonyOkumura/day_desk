@@ -1,3 +1,4 @@
+import '../../domain/entities/app_theme_palette.dart';
 import '../../domain/entities/app_theme_preference.dart';
 import '../../domain/repositories/app_settings_repository.dart';
 import '../datasources/app_settings_local_data_source.dart';
@@ -14,7 +15,18 @@ class AppSettingsRepositoryImpl implements AppSettingsRepository {
   }
 
   @override
+  Future<AppThemePalette> readThemePalette() async {
+    final settings = await _localDataSource.readSettings();
+    return settings?.themePalette ?? AppThemePalette.blue;
+  }
+
+  @override
   Future<void> saveThemePreference(AppThemePreference preference) {
     return _localDataSource.saveThemePreference(preference);
+  }
+
+  @override
+  Future<void> saveThemePalette(AppThemePalette palette) {
+    return _localDataSource.saveThemePalette(palette);
   }
 }

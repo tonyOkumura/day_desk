@@ -18,14 +18,20 @@ const AppSettingsLocalModelSchema = CollectionSchema(
   name: r'AppSettingsLocalModel',
   id: -7711851287718184256,
   properties: {
-    r'themePreference': PropertySchema(
+    r'themePalette': PropertySchema(
       id: 0,
+      name: r'themePalette',
+      type: IsarType.string,
+      enumMap: _AppSettingsLocalModelthemePaletteEnumValueMap,
+    ),
+    r'themePreference': PropertySchema(
+      id: 1,
       name: r'themePreference',
       type: IsarType.string,
       enumMap: _AppSettingsLocalModelthemePreferenceEnumValueMap,
     ),
     r'updatedAt': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -50,6 +56,7 @@ int _appSettingsLocalModelEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  bytesCount += 3 + object.themePalette.name.length * 3;
   bytesCount += 3 + object.themePreference.name.length * 3;
   return bytesCount;
 }
@@ -60,8 +67,9 @@ void _appSettingsLocalModelSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeString(offsets[0], object.themePreference.name);
-  writer.writeDateTime(offsets[1], object.updatedAt);
+  writer.writeString(offsets[0], object.themePalette.name);
+  writer.writeString(offsets[1], object.themePreference.name);
+  writer.writeDateTime(offsets[2], object.updatedAt);
 }
 
 AppSettingsLocalModel _appSettingsLocalModelDeserialize(
@@ -72,10 +80,13 @@ AppSettingsLocalModel _appSettingsLocalModelDeserialize(
 ) {
   final object = AppSettingsLocalModel();
   object.id = id;
-  object.themePreference = _AppSettingsLocalModelthemePreferenceValueEnumMap[
+  object.themePalette = _AppSettingsLocalModelthemePaletteValueEnumMap[
           reader.readStringOrNull(offsets[0])] ??
+      AppThemePalette.blue;
+  object.themePreference = _AppSettingsLocalModelthemePreferenceValueEnumMap[
+          reader.readStringOrNull(offsets[1])] ??
       AppThemePreference.system;
-  object.updatedAt = reader.readDateTime(offsets[1]);
+  object.updatedAt = reader.readDateTime(offsets[2]);
   return object;
 }
 
@@ -87,16 +98,30 @@ P _appSettingsLocalModelDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
+      return (_AppSettingsLocalModelthemePaletteValueEnumMap[
+              reader.readStringOrNull(offset)] ??
+          AppThemePalette.blue) as P;
+    case 1:
       return (_AppSettingsLocalModelthemePreferenceValueEnumMap[
               reader.readStringOrNull(offset)] ??
           AppThemePreference.system) as P;
-    case 1:
+    case 2:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
 }
 
+const _AppSettingsLocalModelthemePaletteEnumValueMap = {
+  r'blue': r'blue',
+  r'green': r'green',
+  r'amber': r'amber',
+};
+const _AppSettingsLocalModelthemePaletteValueEnumMap = {
+  r'blue': AppThemePalette.blue,
+  r'green': AppThemePalette.green,
+  r'amber': AppThemePalette.amber,
+};
 const _AppSettingsLocalModelthemePreferenceEnumValueMap = {
   r'system': r'system',
   r'light': r'light',
@@ -257,6 +282,144 @@ extension AppSettingsLocalModelQueryFilter on QueryBuilder<
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> themePaletteEqualTo(
+    AppThemePalette value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'themePalette',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> themePaletteGreaterThan(
+    AppThemePalette value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'themePalette',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> themePaletteLessThan(
+    AppThemePalette value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'themePalette',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> themePaletteBetween(
+    AppThemePalette lower,
+    AppThemePalette upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'themePalette',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> themePaletteStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'themePalette',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> themePaletteEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'themePalette',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+          QAfterFilterCondition>
+      themePaletteContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'themePalette',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+          QAfterFilterCondition>
+      themePaletteMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'themePalette',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> themePaletteIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'themePalette',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> themePaletteIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'themePalette',
+        value: '',
       ));
     });
   }
@@ -465,6 +628,20 @@ extension AppSettingsLocalModelQueryLinks on QueryBuilder<AppSettingsLocalModel,
 extension AppSettingsLocalModelQuerySortBy
     on QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QSortBy> {
   QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      sortByThemePalette() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'themePalette', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      sortByThemePaletteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'themePalette', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
       sortByThemePreference() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'themePreference', Sort.asc);
@@ -510,6 +687,20 @@ extension AppSettingsLocalModelQuerySortThenBy
   }
 
   QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      thenByThemePalette() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'themePalette', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      thenByThemePaletteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'themePalette', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
       thenByThemePreference() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'themePreference', Sort.asc);
@@ -541,6 +732,13 @@ extension AppSettingsLocalModelQuerySortThenBy
 extension AppSettingsLocalModelQueryWhereDistinct
     on QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QDistinct> {
   QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QDistinct>
+      distinctByThemePalette({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'themePalette', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QDistinct>
       distinctByThemePreference({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'themePreference',
@@ -561,6 +759,13 @@ extension AppSettingsLocalModelQueryProperty on QueryBuilder<
   QueryBuilder<AppSettingsLocalModel, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppThemePalette, QQueryOperations>
+      themePaletteProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'themePalette');
     });
   }
 

@@ -1,5 +1,6 @@
 import 'package:isar/isar.dart';
 
+import '../../domain/entities/app_theme_palette.dart';
 import '../../domain/entities/app_theme_preference.dart';
 import '../models/app_settings_local_model.dart';
 
@@ -13,10 +14,24 @@ class AppSettingsLocalDataSource {
   }
 
   Future<void> saveThemePreference(AppThemePreference preference) async {
+    await _saveSettings((AppSettingsLocalModel settings) {
+      settings.themePreference = preference;
+    });
+  }
+
+  Future<void> saveThemePalette(AppThemePalette palette) async {
+    await _saveSettings((AppSettingsLocalModel settings) {
+      settings.themePalette = palette;
+    });
+  }
+
+  Future<void> _saveSettings(
+    void Function(AppSettingsLocalModel settings) update,
+  ) async {
     final AppSettingsLocalModel settings =
         await readSettings() ?? AppSettingsLocalModel();
 
-    settings.themePreference = preference;
+    update(settings);
     settings.updatedAt = DateTime.now();
 
     await _isar.writeTxn(() async {

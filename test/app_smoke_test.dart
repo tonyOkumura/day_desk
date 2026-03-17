@@ -1,6 +1,8 @@
 import 'package:day_desk/app/controllers/main_layout_controller.dart';
+import 'package:day_desk/app/controllers/theme_controller.dart';
 import 'package:day_desk/app/navigation/app_destination.dart';
 import 'package:day_desk/app/routes/app_routes.dart';
+import 'package:day_desk/features/settings/domain/entities/app_theme_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -28,8 +30,10 @@ void main() {
     );
 
     final MainLayoutController controller = Get.find<MainLayoutController>();
+    final ThemeController themeController = Get.find<ThemeController>();
 
     expect(controller.currentDestination, AppDestination.today);
+    expect(themeController.palette, AppThemePalette.blue);
     expect(find.text('Сегодня'), findsWidgets);
     expect(find.text('Главный экран дня'), findsOneWidget);
   });
@@ -131,7 +135,7 @@ void main() {
     expect(find.text('Модуль календаря'), findsOneWidget);
   });
 
-  testWidgets('выбранная тема сохраняется между перезапусками', (
+  testWidgets('выбранные тема и палитра сохраняются между перезапусками', (
     WidgetTester tester,
   ) async {
     final FakeAppSettingsRepository repository = FakeAppSettingsRepository();
@@ -151,8 +155,13 @@ void main() {
     );
 
     final Finder lightThemeCard = find.widgetWithText(InkWell, 'Светлая');
+    final Finder greenPaletteCard = find.widgetWithText(InkWell, 'Зелёная');
     await tester.ensureVisible(lightThemeCard);
     await tester.tap(lightThemeCard);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.ensureVisible(greenPaletteCard);
+    await tester.tap(greenPaletteCard);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
@@ -170,5 +179,6 @@ void main() {
     );
 
     expect(find.text('active_theme=light'), findsOneWidget);
+    expect(find.text('active_palette=green'), findsOneWidget);
   });
 }
