@@ -65,10 +65,8 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: AppNavigationTheme.desktopBackground(context),
-            ),
+          body: ColoredBox(
+            color: AppNavigationTheme.shellBackgroundColor(context),
             child: SafeArea(
               child: useCompactNavigation
                   ? _CompactMainLayout(

@@ -26,9 +26,9 @@ class AppSurfaceCard extends StatelessWidget {
         ),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: isDark ? 0.24 : 0.1),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            color: colorScheme.shadow.withValues(alpha: isDark ? 0.14 : 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),

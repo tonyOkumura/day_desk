@@ -53,10 +53,10 @@ abstract final class AppNavigationTheme {
         vertical: AppSpacing.xs,
       ),
       selectedItemDecoration: BoxDecoration(
-        color: colorScheme.primary.withValues(alpha: 0.14),
+        color: colorScheme.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppRadii.md),
       ),
-      hoverColor: colorScheme.primary.withValues(alpha: 0.08),
+      hoverColor: colorScheme.primary.withValues(alpha: 0.06),
       hoverTextStyle: theme.textTheme.bodyMedium?.copyWith(
         color: colorScheme.primary,
         fontWeight: FontWeight.w600,
@@ -89,38 +89,20 @@ abstract final class AppNavigationTheme {
   }
 
   static Color gNavTabBackground(BuildContext context) {
-    return Theme.of(context).colorScheme.primary.withValues(alpha: 0.14);
+    return Theme.of(context).colorScheme.primary.withValues(alpha: 0.1);
   }
 
   static List<BoxShadow> gNavShadow(BuildContext context) {
     return <BoxShadow>[
       BoxShadow(
-        color: Colors.black.withValues(alpha: 0.08),
-        blurRadius: 18,
-        offset: const Offset(0, -4),
+        color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.05),
+        blurRadius: 10,
+        offset: const Offset(0, -2),
       ),
     ];
   }
 
-  static Gradient desktopBackground(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme colorScheme = theme.colorScheme;
-    final bool isDark = theme.brightness == Brightness.dark;
-
-    return LinearGradient(
-      colors: isDark
-          ? <Color>[
-              colorScheme.surface,
-              colorScheme.surfaceContainer,
-              colorScheme.surfaceContainerHighest,
-            ]
-          : <Color>[
-              colorScheme.surfaceBright,
-              colorScheme.surfaceContainerLow,
-              colorScheme.surfaceContainerHigh,
-            ],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    );
+  static Color shellBackgroundColor(BuildContext context) {
+    return Theme.of(context).colorScheme.surface;
   }
 }

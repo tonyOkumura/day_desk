@@ -2,6 +2,8 @@ import 'package:day_desk/app/bindings/app_binding.dart';
 import 'package:day_desk/app/bootstrap/app_startup_state.dart';
 import 'package:day_desk/app/day_desk_app.dart';
 import 'package:day_desk/core/logging/app_logger.dart';
+import 'package:day_desk/core/notifications/app_notification_service.dart';
+import 'package:day_desk/core/notifications/notification_config.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_palette.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_preference.dart';
 import 'package:day_desk/features/settings/domain/repositories/app_settings_repository.dart';
@@ -25,6 +27,13 @@ class AppTestHarness {
 
     if (!Get.isRegistered<AppLogger>()) {
       Get.put<AppLogger>(AppLogger(), permanent: true);
+    }
+
+    if (!Get.isRegistered<AppNotificationService>()) {
+      Get.put<AppNotificationService>(
+        FakeAppNotificationService(),
+        permanent: true,
+      );
     }
 
     Get.put<AppSettingsRepository>(resolvedRepository, permanent: true);
@@ -71,6 +80,54 @@ class AppTestHarness {
 
   Future<void> dispose() async {
     Get.reset();
+  }
+}
+
+class FakeAppNotificationService extends AppNotificationService {
+  FakeAppNotificationService()
+      : super(
+          logger: AppLogger(),
+        );
+
+  final List<({String title, String message})> successEvents =
+      <({String title, String message})>[];
+  final List<({String title, String message})> errorEvents =
+      <({String title, String message})>[];
+
+  @override
+  void show(NotificationConfig config) {
+    switch (config.type) {
+      case NotificationType.success:
+        successEvents.add((
+          title: config.title,
+          message: config.message ?? '',
+        ));
+      case NotificationType.error:
+        errorEvents.add((
+          title: config.title,
+          message: config.message ?? '',
+        ));
+    }
+  }
+
+  @override
+  void showSuccess({
+    required String title,
+    String? message,
+    VoidCallback? onTap,
+    VoidCallback? onClose,
+  }) {
+    successEvents.add((title: title, message: message ?? ''));
+  }
+
+  @override
+  void showError({
+    required String title,
+    String? message,
+    VoidCallback? onTap,
+    VoidCallback? onClose,
+  }) {
+    errorEvents.add((title: title, message: message ?? ''));
   }
 }
 

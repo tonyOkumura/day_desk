@@ -35,6 +35,7 @@ class AppBootstrap {
         } catch (error, stackTrace) {
           logger.error(
             'Bootstrap failed before app startup.',
+            tag: 'AppBootstrap',
             error: error,
             stackTrace: stackTrace,
           );
@@ -49,6 +50,7 @@ class AppBootstrap {
       (Object error, StackTrace stackTrace) {
         logger.error(
           'Unhandled zoned exception.',
+          tag: 'AppBootstrap',
           error: error,
           stackTrace: stackTrace,
         );

@@ -7,6 +7,7 @@ abstract final class AppErrorHandler {
     FlutterError.onError = (FlutterErrorDetails details) {
       logger.error(
         'Flutter framework error.',
+        tag: 'AppErrorHandler',
         error: details.exception,
         stackTrace: details.stack,
       );
@@ -20,6 +21,7 @@ abstract final class AppErrorHandler {
     ) {
       logger.error(
         'Platform dispatcher error.',
+        tag: 'AppErrorHandler',
         error: error,
         stackTrace: stackTrace,
       );

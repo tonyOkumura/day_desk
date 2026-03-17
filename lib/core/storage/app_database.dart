@@ -30,7 +30,10 @@ class AppDatabase {
 
     _logger.info(
       'Opening local database.',
-      details: directoryPath,
+      tag: 'AppDatabase',
+      context: <String, String>{
+        'directoryPath': directoryPath,
+      },
     );
 
     _isar = await Isar.open(
@@ -47,7 +50,10 @@ class AppDatabase {
       return;
     }
 
-    _logger.info('Closing local database.');
+    _logger.info(
+      'Closing local database.',
+      tag: 'AppDatabase',
+    );
     await instance.close();
     _isar = null;
   }
