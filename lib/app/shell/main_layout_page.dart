@@ -9,6 +9,7 @@ import '../../core/config/app_breakpoints.dart';
 import '../../features/availability/presentation/pages/availability_content_page.dart';
 import '../../features/calendar/presentation/pages/calendar_content_page.dart';
 import '../../features/dashboard/presentation/pages/dashboard_content_page.dart';
+import '../../features/map/presentation/controllers/places_map_controller.dart';
 import '../../features/map/presentation/pages/map_content_page.dart';
 import '../../features/settings/presentation/pages/settings_content_page.dart';
 import '../../features/tasks/presentation/pages/tasks_content_page.dart';
@@ -17,7 +18,6 @@ import '../navigation/app_destination.dart';
 import '../theme/app_navigation_theme.dart';
 import '../theme/app_spacing.dart';
 import 'main_layout_intents.dart';
-import 'theme_mode_menu_button.dart';
 
 class MainLayoutPage extends StatefulWidget {
   const MainLayoutPage({required this.initialDestination, super.key});
@@ -144,7 +144,18 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
                         const DismissIntent(),
                       );
 
-                      if (dismissResult == null) {
+                      if (dismissResult != null) {
+                        return null;
+                      }
+
+                      final bool handledByMap =
+                          destination == AppDestination.map &&
+                          Get.isRegistered<PlacesMapController>() &&
+                          Get.find<PlacesMapController>().dismissOverlays(
+                            isCompactLayout: useCompactNavigation,
+                          );
+
+                      if (!handledByMap) {
                         FocusManager.instance.primaryFocus?.unfocus();
                       }
                       return null;
@@ -337,25 +348,16 @@ class _MainLayoutBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final TextTheme textTheme = theme.textTheme;
-    final ColorScheme colorScheme = theme.colorScheme;
-
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
+        final ThemeData theme = Theme.of(context);
+        final TextTheme textTheme = theme.textTheme;
         final double width = constraints.maxWidth;
-        final bool useCompactHeader = width < AppBreakpoints.compactHeader;
         final bool useCompactDensity = width < AppBreakpoints.compactDensity;
-        final EdgeInsets headerPadding = EdgeInsets.fromLTRB(
-          useCompactDensity ? AppSpacing.lg : AppSpacing.xl,
-          useCompactDensity ? AppSpacing.lg : AppSpacing.xl,
-          useCompactDensity ? AppSpacing.lg : AppSpacing.xl,
-          useCompactDensity ? AppSpacing.lg : AppSpacing.xl,
-        );
         final TextStyle? titleStyle =
-            (useCompactHeader
-                    ? textTheme.headlineMedium
-                    : textTheme.displaySmall)
+            (width < AppBreakpoints.compactHeader
+                    ? textTheme.headlineSmall
+                    : textTheme.headlineMedium)
                 ?.copyWith(fontWeight: FontWeight.w800);
 
         return FocusTraversalGroup(
@@ -363,69 +365,35 @@ class _MainLayoutBody extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Padding(
-                padding: headerPadding,
-                child: useCompactHeader
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          _HeaderCopy(
-                            currentDestination: currentDestination,
-                            titleStyle: titleStyle,
-                            colorScheme: colorScheme,
-                            compactDensity: useCompactDensity,
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                          const FocusTraversalOrder(
-                            order: NumericFocusOrder(1),
-                            child: Align(
-                              alignment: AlignmentDirectional.centerStart,
-                              child: ThemeModeMenuButton(),
-                            ),
-                          ),
-                        ],
-                      )
-                    : Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Expanded(
-                            child: _HeaderCopy(
-                              currentDestination: currentDestination,
-                              titleStyle: titleStyle,
-                              colorScheme: colorScheme,
-                              compactDensity: useCompactDensity,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.lg),
-                          const FocusTraversalOrder(
-                            order: NumericFocusOrder(1),
-                            child: ThemeModeMenuButton(),
-                          ),
-                        ],
-                      ),
+              _PageTitleBar(
+                currentDestination: currentDestination,
+                titleStyle: titleStyle,
+                compactDensity: useCompactDensity,
               ),
-              Expanded(
-                child: FocusTraversalOrder(
-                  order: const NumericFocusOrder(2),
-                  child: PageStorage(
-                    bucket: controller.pageStorageBucket,
-                    child: PageView(
-                      controller: controller.pageController,
-                      physics: swipeEnabled
-                          ? const PageScrollPhysics()
-                          : const NeverScrollableScrollPhysics(),
-                      onPageChanged: (int index) {
-                        controller.handlePageChanged(index, syncRoute: true);
-                      },
-                      children: pages,
-                    ),
-                  ),
-                ),
-              ),
+              Expanded(child: _buildPageViewport()),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildPageViewport() {
+    return FocusTraversalOrder(
+      order: const NumericFocusOrder(2),
+      child: PageStorage(
+        bucket: controller.pageStorageBucket,
+        child: PageView(
+          controller: controller.pageController,
+          physics: swipeEnabled
+              ? const PageScrollPhysics()
+              : const NeverScrollableScrollPhysics(),
+          onPageChanged: (int index) {
+            controller.handlePageChanged(index, syncRoute: true);
+          },
+          children: pages,
+        ),
+      ),
     );
   }
 }
@@ -565,35 +533,40 @@ class _DesktopSidebarHeader extends StatelessWidget {
   }
 }
 
-class _HeaderCopy extends StatelessWidget {
-  const _HeaderCopy({
+class _PageTitleBar extends StatelessWidget {
+  const _PageTitleBar({
     required this.currentDestination,
     required this.titleStyle,
-    required this.colorScheme,
     required this.compactDensity,
   });
 
   final AppDestination currentDestination;
   final TextStyle? titleStyle;
-  final ColorScheme colorScheme;
   final bool compactDensity;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(currentDestination.title, style: titleStyle),
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          currentDestination.summary,
-          maxLines: compactDensity ? 2 : 3,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: colorScheme.onSurfaceVariant,
+    final ThemeData theme = Theme.of(context);
+
+    return Material(
+      color: theme.colorScheme.surface,
+      child: Container(
+        key: Key('page-app-bar-${currentDestination.name}'),
+        height: compactDensity ? 64 : 72,
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(
+          horizontal: compactDensity ? AppSpacing.lg : AppSpacing.xl,
+        ),
+        alignment: Alignment.centerLeft,
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+            ),
           ),
         ),
-      ],
+        child: Text(currentDestination.title, style: titleStyle),
+      ),
     );
   }
 }

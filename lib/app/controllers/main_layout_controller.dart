@@ -128,13 +128,24 @@ class MainLayoutController extends GetxController {
 
   void requestPageFocus(AppDestination destination) {
     final FocusNode focusNode = pageFocusNodeFor(destination);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (focusNode.context == null) {
-        return;
-      }
+    void attempt(int remainingFrames) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!focusNode.canRequestFocus) {
+          return;
+        }
 
-      focusNode.requestFocus();
-    });
+        if (focusNode.context == null) {
+          if (remainingFrames > 0) {
+            attempt(remainingFrames - 1);
+          }
+          return;
+        }
+
+        focusNode.requestFocus();
+      });
+    }
+
+    attempt(2);
   }
 
   Future<void> _syncRoute(AppDestination destination) async {

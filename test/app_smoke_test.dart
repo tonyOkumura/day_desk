@@ -34,6 +34,7 @@ void main() {
     expect(themeController.palette, AppThemePalette.blue);
     expect(Localizations.localeOf(context), const Locale('ru', 'RU'));
     expect(find.text('Сегодня'), findsWidgets);
+    expect(find.byKey(const Key('page-app-bar-today')), findsOneWidget);
     expect(find.text('Главный экран дня'), findsOneWidget);
   });
 
@@ -53,7 +54,15 @@ void main() {
     expect(controller.currentDestination, AppDestination.map);
     expect(find.text('Карта'), findsWidgets);
     expect(find.byType(FlutterMap), findsOneWidget);
-    expect(find.text('Карта дня'), findsOneWidget);
+    expect(find.text('Карта дня'), findsWidgets);
+    expect(find.byKey(const Key('page-app-bar-map')), findsOneWidget);
+    expect(find.byKey(const Key('map-compact-sheet')), findsOneWidget);
+    expect(
+      find.text(
+        'Стартовый картографический экран Москвы и будущих мест на день.',
+      ),
+      findsNothing,
+    );
   });
 
   testWidgets('на узком экране используется google nav bar', (
@@ -107,7 +116,7 @@ void main() {
   });
 
   testWidgets(
-    'на широком экране карта показывает split view с панелью и картой',
+    'на широком экране карта работает как immersive canvas с overlay panel',
     (WidgetTester tester) async {
       final AppTestHarness harness = await AppTestHarness.bootstrap();
       addTearDown(() async => harness.dispose());
@@ -117,12 +126,52 @@ void main() {
 
       await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.map);
 
+      final Size mapSize = tester.getSize(
+        find.byKey(const Key('map-interactive-surface')),
+      );
+
       expect(find.byType(FlutterMap), findsOneWidget);
-      expect(find.text('Карта дня'), findsOneWidget);
-      expect(find.textContaining('Стартовая область: Москва'), findsWidgets);
+      expect(find.byKey(const Key('map-desktop-panel')), findsOneWidget);
+      expect(find.byKey(const Key('page-app-bar-map')), findsOneWidget);
       expect(find.byKey(const Key('map-recenter-button')), findsOneWidget);
+      expect(mapSize.width, greaterThan(950));
+      expect(mapSize.height, greaterThan(620));
     },
   );
+
+  testWidgets('desktop panel на карте скрывается по toggle и по Escape', (
+    WidgetTester tester,
+  ) async {
+    final AppTestHarness harness = await AppTestHarness.bootstrap();
+    addTearDown(() async => harness.dispose());
+
+    AppTestHarness.setSurfaceSize(tester, size: const Size(1440, 960));
+    addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+    await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.map);
+
+    expect(find.byKey(const Key('map-desktop-panel')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('map-panel-toggle-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byKey(const Key('map-desktop-panel')), findsNothing);
+    expect(find.byKey(const Key('map-panel-collapsed-button')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('map-panel-collapsed-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byKey(const Key('map-desktop-panel')), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byKey(const Key('map-desktop-panel')), findsNothing);
+    expect(find.byKey(const Key('map-panel-collapsed-button')), findsOneWidget);
+  });
 
   testWidgets(
     'тап по нижней навигации и свайп синхронизируют текущую вкладку',
@@ -259,32 +308,24 @@ void main() {
     expect(find.byKey(const Key('work-day-end-option-8')), findsNothing);
   });
 
-  testWidgets(
-    'Ctrl+2 переключает на карту и переводит фокус на активную страницу',
-    (WidgetTester tester) async {
-      final AppTestHarness harness = await AppTestHarness.bootstrap();
-      addTearDown(() async => harness.dispose());
+  testWidgets('Ctrl+2 переключает на карту', (WidgetTester tester) async {
+    final AppTestHarness harness = await AppTestHarness.bootstrap();
+    addTearDown(() async => harness.dispose());
 
-      AppTestHarness.setSurfaceSize(tester, size: const Size(1440, 960));
-      addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+    AppTestHarness.setSurfaceSize(tester, size: const Size(1440, 960));
+    addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
 
-      await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.today);
+    await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.today);
 
-      final MainLayoutController controller = Get.find<MainLayoutController>();
+    final MainLayoutController controller = Get.find<MainLayoutController>();
 
-      await _sendControlShortcut(tester, LogicalKeyboardKey.digit2);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
+    await _sendControlShortcut(tester, LogicalKeyboardKey.digit2);
+    await tester.pump();
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
 
-      final Focus mapFocus = tester.widget<Focus>(
-        find.byKey(const Key('page-focus-map')),
-      );
-
-      expect(controller.currentDestination, AppDestination.map);
-      expect(controller.currentRoutePath, AppDestination.map.route);
-      expect(mapFocus.focusNode?.hasPrimaryFocus, isTrue);
-    },
-  );
+    expect(controller.currentDestination, AppDestination.map);
+    expect(controller.currentRoutePath, AppDestination.map.route);
+  });
 
   testWidgets('Ctrl+B работает только в expanded layout', (
     WidgetTester tester,

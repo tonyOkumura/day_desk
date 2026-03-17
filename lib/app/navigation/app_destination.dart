@@ -18,6 +18,7 @@ enum AppDestination {
     icon: Icons.map_outlined,
     selectedIcon: Icons.map_rounded,
     pageStorageKey: 'map-tab',
+    usesImmersiveCanvas: true,
   ),
   calendar(
     route: '/calendar',
@@ -64,6 +65,7 @@ enum AppDestination {
     required this.icon,
     required this.selectedIcon,
     required this.pageStorageKey,
+    this.usesImmersiveCanvas = false,
   });
 
   final String route;
@@ -73,6 +75,7 @@ enum AppDestination {
   final IconData icon;
   final IconData selectedIcon;
   final String pageStorageKey;
+  final bool usesImmersiveCanvas;
 
   static AppDestination fromRoute(String route) {
     return AppDestination.values.firstWhere(

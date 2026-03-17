@@ -25,16 +25,17 @@ class AppBootstrap {
   AppBootstrap._();
 
   static Future<void> run() async {
-    WidgetsFlutterBinding.ensureInitialized();
-    Intl.defaultLocale = AppDateFormatter.localeName;
-    await initializeDateFormatting(AppDateFormatter.localeName);
-
-    final AppLogger logger = AppLogger();
-    Get.put<AppLogger>(logger, permanent: true);
-    AppErrorHandler.install(logger);
-
     await runZonedGuarded(
       () async {
+        WidgetsFlutterBinding.ensureInitialized();
+        Intl.defaultLocale = AppDateFormatter.localeName;
+        await initializeDateFormatting(AppDateFormatter.localeName);
+
+        final AppLogger logger = Get.isRegistered<AppLogger>()
+            ? Get.find<AppLogger>()
+            : Get.put<AppLogger>(AppLogger(), permanent: true);
+        AppErrorHandler.install(logger);
+
         try {
           await initializeDependencies();
           runApp(const DayDeskApp());
@@ -55,6 +56,9 @@ class AppBootstrap {
         }
       },
       (Object error, StackTrace stackTrace) {
+        final AppLogger logger = Get.isRegistered<AppLogger>()
+            ? Get.find<AppLogger>()
+            : AppLogger();
         logger.error(
           'Unhandled zoned exception.',
           tag: 'AppBootstrap',
