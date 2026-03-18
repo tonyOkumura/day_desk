@@ -38,7 +38,7 @@ class TaskEditorController {
        _deadline = Rxn<DateTime>(initialTask?.deadline),
        _reminderPreset =
            (initialTask?.reminderPreset ?? defaultReminderPreset).obs,
-       _quadrant = (initialTask?.quadrant ?? TaskQuadrant.schedule).obs,
+       _quadrant = (initialTask?.quadrant ?? TaskQuadrant.later).obs,
        _subtasks = <TaskChecklistItem>[...?initialTask?.subtasks].obs,
        _category = (initialTask?.category ?? TaskCategory.other).obs,
        _isAllDay = (initialTask?.isAllDay ?? false).obs,
@@ -82,6 +82,8 @@ class TaskEditorController {
   ReminderLeadTimePreset get reminderPreset => _reminderPreset.value;
   DateTime? get resolvedReminderAt => _draftReminderAt();
   TaskQuadrant get quadrant => _quadrant.value;
+  bool get isUrgent => _quadrant.value.isUrgent;
+  bool get isImportant => _quadrant.value.isImportant;
   List<TaskChecklistItem> get subtasks => _sortedSubtasks(_subtasks);
   TaskCategory get category => _category.value;
   String? get titleError => _titleError.value;
@@ -158,6 +160,20 @@ class TaskEditorController {
 
   void updateQuadrant(TaskQuadrant value) {
     _quadrant.value = value;
+  }
+
+  void updateUrgency(bool value) {
+    _quadrant.value = TaskQuadrant.fromFlags(
+      isUrgent: value,
+      isImportant: isImportant,
+    );
+  }
+
+  void updateImportance(bool value) {
+    _quadrant.value = TaskQuadrant.fromFlags(
+      isUrgent: isUrgent,
+      isImportant: value,
+    );
   }
 
   void addSubtask([String initialTitle = '']) {

@@ -21,6 +21,17 @@ class AppTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final bool compactDensity = layoutTier.isCompact;
+    final bool hasTitle = config.title.trim().isNotEmpty;
+    final bool showTopRow = hasTitle || config.actions.isNotEmpty;
+    final bool bottomOnly = !showTopRow && config.hasBottom;
+    final double verticalPaddingTop = bottomOnly
+        ? AppSpacing.md
+        : (showTopRow
+              ? (compactDensity ? AppSpacing.lg : AppSpacing.xl)
+              : AppSpacing.lg);
+    final double verticalPaddingBottom = bottomOnly
+        ? (compactDensity ? AppSpacing.md : AppSpacing.lg)
+        : (compactDensity ? AppSpacing.lg : AppSpacing.xl);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -29,28 +40,30 @@ class AppTopBar extends StatelessWidget {
         compactDensity ? AppSpacing.lg : AppSpacing.xl,
         AppSpacing.md,
       ),
-        child: AppGlassBarSurface(
-          key: pageKey,
-          padding: EdgeInsets.fromLTRB(
-            compactDensity ? AppSpacing.lg : AppSpacing.xl,
-            compactDensity ? AppSpacing.lg : AppSpacing.xl,
+      child: AppGlassBarSurface(
+        key: pageKey,
+        padding: EdgeInsets.fromLTRB(
           compactDensity ? AppSpacing.lg : AppSpacing.xl,
+          verticalPaddingTop,
           compactDensity ? AppSpacing.lg : AppSpacing.xl,
+          verticalPaddingBottom,
         ),
         child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              if (layoutTier.isMedium && config.actions.isNotEmpty)
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (showTopRow)
+              if (layoutTier.isMedium && config.actions.isNotEmpty && hasTitle)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      config.title,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
+                    if (hasTitle)
+                      Text(
+                        config.title,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    ),
                     const SizedBox(height: AppSpacing.md),
                     Wrap(
                       spacing: AppSpacing.sm,
@@ -62,17 +75,21 @@ class AppTopBar extends StatelessWidget {
               else
                 Row(
                   children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        config.title,
-                        style: (compactDensity
-                                ? theme.textTheme.headlineSmall
-                                : theme.textTheme.headlineMedium)
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                    ),
+                    if (hasTitle)
+                      Expanded(
+                        child: Text(
+                          config.title,
+                          style:
+                              (compactDensity
+                                      ? theme.textTheme.headlineSmall
+                                      : theme.textTheme.headlineMedium)
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      )
+                    else
+                      const Spacer(),
                     if (config.actions.isNotEmpty) ...<Widget>[
-                      const SizedBox(width: AppSpacing.lg),
+                      if (hasTitle) const SizedBox(width: AppSpacing.lg),
                       Wrap(
                         spacing: AppSpacing.sm,
                         runSpacing: AppSpacing.sm,
@@ -82,7 +99,7 @@ class AppTopBar extends StatelessWidget {
                   ],
                 ),
             if (config.hasBottom) ...<Widget>[
-              const SizedBox(height: AppSpacing.lg),
+              if (showTopRow) const SizedBox(height: AppSpacing.lg),
               config.bottom!,
             ],
           ],

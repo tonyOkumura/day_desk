@@ -17,7 +17,7 @@ class Task {
     this.reminderPreset = ReminderLeadTimePreset.none,
     this.reminderAt,
     this.isUrgent = false,
-    this.isImportant = true,
+    this.isImportant = false,
     List<TaskChecklistItem> subtasks = const <TaskChecklistItem>[],
     this.status = TaskStatus.pending,
     this.category = TaskCategory.other,
@@ -58,6 +58,8 @@ class Task {
   bool get isCompleted => status == TaskStatus.completed;
   bool get isOverdue => isOverdueAt(reference: evaluationTime);
   bool get hasReminderPreset => reminderPreset.hasReminder;
+  bool get hasIncompleteSubtasks =>
+      subtasks.any((TaskChecklistItem item) => !item.isCompleted);
   TaskQuadrant get quadrant =>
       TaskQuadrant.fromFlags(isUrgent: isUrgent, isImportant: isImportant);
   int get totalSubtaskCount => subtasks.length;

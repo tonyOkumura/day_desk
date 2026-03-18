@@ -188,42 +188,38 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
                                 context,
                               ),
                               showToggleButton: true,
-                              headerBuilder: (
-                                BuildContext context,
-                                bool extended,
-                              ) {
-                                return _DesktopSidebarHeader(
-                                  extended: extended,
-                                );
-                              },
-                              footerBuilder: (
-                                BuildContext context,
-                                bool extended,
-                              ) {
-                                return _DesktopSidebarFooter(
-                                  extended: extended,
-                                );
-                              },
+                              headerBuilder:
+                                  (BuildContext context, bool extended) {
+                                    return _DesktopSidebarHeader(
+                                      extended: extended,
+                                    );
+                                  },
+                              footerBuilder:
+                                  (BuildContext context, bool extended) {
+                                    return _DesktopSidebarFooter(
+                                      extended: extended,
+                                    );
+                                  },
                               items: AppDestination.values
                                   .map(
-                                    (AppDestination destination) => SidebarXItem(
+                                    (
+                                      AppDestination destination,
+                                    ) => SidebarXItem(
                                       label: destination.label,
-                                      iconBuilder: (
-                                        bool selected,
-                                        bool hovered,
-                                      ) {
-                                        return Tooltip(
-                                          message: destination.label,
-                                          waitDuration: const Duration(
-                                            milliseconds: 500,
-                                          ),
-                                          child: Icon(
-                                            selected
-                                                ? destination.selectedIcon
-                                                : destination.icon,
-                                          ),
-                                        );
-                                      },
+                                      iconBuilder:
+                                          (bool selected, bool hovered) {
+                                            return Tooltip(
+                                              message: destination.label,
+                                              waitDuration: const Duration(
+                                                milliseconds: 500,
+                                              ),
+                                              child: Icon(
+                                                selected
+                                                    ? destination.selectedIcon
+                                                    : destination.icon,
+                                              ),
+                                            );
+                                          },
                                       onTap: () {
                                         _controller.selectDestination(
                                           destination,
@@ -340,7 +336,9 @@ class _MainLayoutBody extends StatelessWidget {
                 switchInCurve: Curves.easeOutCubic,
                 switchOutCurve: Curves.easeInCubic,
                 child: AppTopBar(
-                  key: ValueKey<String>('page-header-${currentDestination.name}'),
+                  key: ValueKey<String>(
+                    'page-header-${currentDestination.name}',
+                  ),
                   pageKey: Key('page-app-bar-${currentDestination.name}'),
                   config: headerConfig,
                   layoutTier: layoutTier,
@@ -376,9 +374,9 @@ class _MainLayoutBody extends StatelessWidget {
   ShellPageHeaderConfig _headerConfigFor(AppDestination destination) {
     return switch (destination) {
       AppDestination.tasks => ShellPageHeaderConfig(
-          title: destination.title,
-          bottom: const TasksPageHeader(),
-        ),
+        title: '',
+        bottom: const TasksPageHeader(),
+      ),
       _ => ShellPageHeaderConfig(title: destination.title),
     };
   }

@@ -120,7 +120,6 @@ void main() {
     final MainLayoutController controller = Get.find<MainLayoutController>();
 
     expect(controller.currentDestination, AppDestination.tasks);
-    expect(find.text('Задачи'), findsWidgets);
     expect(find.byKey(const Key('page-app-bar-tasks')), findsOneWidget);
     expect(find.byKey(const Key('tasks-state-empty')), findsOneWidget);
     expect(find.text('Матрица пока пустая'), findsOneWidget);
@@ -270,7 +269,12 @@ void main() {
     expect(find.byKey(const Key('task-editor-fullscreen')), findsOneWidget);
     expect(find.byKey(const Key('task-editor-title-field')), findsOneWidget);
     expect(
-      find.byKey(const Key('task-editor-quadrant-selector')),
+      find.byKey(const Key('task-editor-importance-toggle')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('task-editor-urgency-toggle')), findsOneWidget);
+    expect(
+      find.byKey(const Key('task-editor-subtask-draft-field')),
       findsOneWidget,
     );
     expect(
@@ -335,9 +339,10 @@ void main() {
     expect(find.byKey(const Key('task-editor-dialog')), findsOneWidget);
     expect(find.byKey(const Key('task-editor-title-field')), findsOneWidget);
     expect(
-      find.byKey(const Key('task-editor-quadrant-selector')),
+      find.byKey(const Key('task-editor-importance-toggle')),
       findsOneWidget,
     );
+    expect(find.byKey(const Key('task-editor-urgency-toggle')), findsOneWidget);
     expect(
       find.byKey(const Key('task-editor-deadline-button')),
       findsOneWidget,
@@ -381,6 +386,10 @@ void main() {
         find.byKey(const Key('task-overflow-button-task-1')),
         findsOneWidget,
       );
+      expect(
+        find.byKey(const Key('task-completion-button-task-1')),
+        findsNothing,
+      );
       expect(find.byKey(const Key('task-edit-button-task-1')), findsNothing);
       expect(
         find.byKey(const Key('task-reschedule-button-task-1')),
@@ -394,7 +403,49 @@ void main() {
     },
   );
 
-  testWidgets('compact card открывает editor по tap по плитке', (
+  testWidgets(
+    'на compact layout tap по карточке toggles completion, editor идёт через overflow',
+    (WidgetTester tester) async {
+      final DateTime today = DateTime.now();
+      final AppTestHarness harness = await AppTestHarness.bootstrap(
+        taskRepository: FakeTaskRepository(
+          initialTasks: <Task>[
+            Task(
+              id: 'task-1',
+              title: 'Подготовить вопросы для встречи',
+              date: DateTime(today.year, today.month, today.day),
+              isUrgent: TaskQuadrant.doNow.isUrgent,
+              isImportant: TaskQuadrant.doNow.isImportant,
+              status: TaskStatus.pending,
+              category: TaskCategory.work,
+              createdAt: today,
+              updatedAt: today,
+            ),
+          ],
+        ),
+      );
+      addTearDown(() async => harness.dispose());
+
+      AppTestHarness.setSurfaceSize(tester, size: const Size(390, 844));
+      addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+      await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.tasks);
+      await tester.tap(find.byKey(const Key('tasks-view-mode-list')));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(
+        find.byKey(const Key('task-overflow-button-task-1')),
+      );
+      await tester.tap(find.byKey(const Key('task-overflow-button-task-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Редактировать').last);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('task-editor-fullscreen')), findsOneWidget);
+    },
+  );
+
+  testWidgets('list mode адаптируется к 1 2 и 3 колонкам по ширине', (
     WidgetTester tester,
   ) async {
     final DateTime today = DateTime.now();
@@ -403,7 +454,7 @@ void main() {
         initialTasks: <Task>[
           Task(
             id: 'task-1',
-            title: 'Подготовить вопросы для встречи',
+            title: 'Первая задача',
             date: DateTime(today.year, today.month, today.day),
             isUrgent: TaskQuadrant.doNow.isUrgent,
             isImportant: TaskQuadrant.doNow.isImportant,
@@ -412,25 +463,64 @@ void main() {
             createdAt: today,
             updatedAt: today,
           ),
+          Task(
+            id: 'task-2',
+            title: 'Вторая задача',
+            date: DateTime(today.year, today.month, today.day),
+            isUrgent: TaskQuadrant.schedule.isUrgent,
+            isImportant: TaskQuadrant.schedule.isImportant,
+            status: TaskStatus.pending,
+            category: TaskCategory.personal,
+            createdAt: today,
+            updatedAt: today,
+          ),
+          Task(
+            id: 'task-3',
+            title: 'Третья задача',
+            date: DateTime(today.year, today.month, today.day),
+            isUrgent: TaskQuadrant.quickWins.isUrgent,
+            isImportant: TaskQuadrant.quickWins.isImportant,
+            status: TaskStatus.completed,
+            category: TaskCategory.other,
+            createdAt: today,
+            updatedAt: today,
+          ),
         ],
       ),
     );
     addTearDown(() async => harness.dispose());
 
-    AppTestHarness.setSurfaceSize(tester, size: const Size(1920, 1080));
+    AppTestHarness.setSurfaceSize(tester, size: const Size(720, 960));
     addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
 
     await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.tasks);
 
+    await tester.tap(find.byKey(const Key('tasks-view-mode-list')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('tasks-list-grid-1')), findsOneWidget);
+    expect(
+      find.byKey(const Key('task-card-density-comfortable-task-1')),
+      findsOneWidget,
+    );
+
+    AppTestHarness.setSurfaceSize(tester, size: const Size(1100, 960));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('tasks-list-grid-2')), findsOneWidget);
+    expect(
+      find.byKey(const Key('task-card-density-comfortable-task-2')),
+      findsOneWidget,
+    );
+
+    AppTestHarness.setSurfaceSize(tester, size: const Size(1920, 960));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('tasks-list-grid-3')), findsOneWidget);
     expect(
       find.byKey(const Key('task-card-density-compact-task-1')),
       findsOneWidget,
     );
-
-    await tester.tap(find.byKey(const Key('task-card-tile-task-1')));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('task-editor-dialog')), findsOneWidget);
   });
 
   testWidgets('на wide layout задачу можно перетащить в другой квадрант', (

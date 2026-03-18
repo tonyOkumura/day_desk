@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radii.dart';
@@ -9,7 +11,6 @@ import '../../../../core/date/app_date_formatter.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/task_checklist_item.dart';
 import '../../domain/entities/task_quadrant.dart';
-import '../../domain/entities/task_status.dart';
 
 enum TaskCardDensity { comfortable, compact }
 
@@ -20,6 +21,7 @@ class TaskCard extends StatelessWidget {
     required this.dateFormatter,
     required this.onToggleCompleted,
     required this.onEdit,
+    required this.enableDoubleTapEdit,
     required this.onDelete,
     required this.onReschedule,
     required this.onReclassify,
@@ -32,6 +34,7 @@ class TaskCard extends StatelessWidget {
   final AppDateFormatter dateFormatter;
   final VoidCallback onToggleCompleted;
   final VoidCallback onEdit;
+  final bool enableDoubleTapEdit;
   final VoidCallback onDelete;
   final VoidCallback onReschedule;
   final ValueChanged<TaskQuadrant> onReclassify;
@@ -49,30 +52,58 @@ class TaskCard extends StatelessWidget {
         .toList(growable: false);
     final int hiddenItemsCount = task.subtasks.length - previewItems.length;
 
-    final Widget content = density == TaskCardDensity.compact
-        ? _buildCompactContent(
-            context: context,
-            textTheme: textTheme,
-            colorScheme: colorScheme,
-            completed: completed,
-            overdue: overdue,
-          )
-        : _buildComfortableContent(
-            context: context,
-            textTheme: textTheme,
-            colorScheme: colorScheme,
-            completed: completed,
-            overdue: overdue,
-            previewItems: previewItems,
-            hiddenItemsCount: hiddenItemsCount,
-          );
+    final Widget content = Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        if (completed)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  final double iconSize = (constraints.maxHeight * 0.9).clamp(
+                    density == TaskCardDensity.compact ? 72.0 : 88.0,
+                    density == TaskCardDensity.compact ? 132.0 : 176.0,
+                  );
+
+                  return Center(
+                    child: Icon(
+                      Icons.check_circle_rounded,
+                      key: Key('task-completed-overlay-${task.id}'),
+                      size: iconSize,
+                      color: colorScheme.primary.withValues(alpha: 0.12),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        density == TaskCardDensity.compact
+            ? _buildCompactContent(
+                context: context,
+                textTheme: textTheme,
+                colorScheme: colorScheme,
+                completed: completed,
+                overdue: overdue,
+              )
+            : _buildComfortableContent(
+                context: context,
+                textTheme: textTheme,
+                colorScheme: colorScheme,
+                completed: completed,
+                overdue: overdue,
+                previewItems: previewItems,
+                hiddenItemsCount: hiddenItemsCount,
+              ),
+      ],
+    );
 
     return Opacity(
       opacity: completed ? 0.74 : 1,
       child: _TaskInteractiveShell(
         key: Key('task-card-${task.id}'),
         tileKey: Key('task-card-tile-${task.id}'),
-        onTap: onEdit,
+        onTap: onToggleCompleted,
+        onDoubleTap: enableDoubleTapEdit ? onEdit : null,
         child: Container(
           key: Key('task-card-density-${density.name}-${task.id}'),
           child: content,
@@ -103,10 +134,6 @@ class TaskCard extends StatelessWidget {
           ),
           titleMaxLines: 3,
           titleBottomSpacing: AppSpacing.md,
-          completionButton: _buildCompletionButton(
-            completed: completed,
-            compact: false,
-          ),
           overflowButton: _buildOverflowButton(
             compact: false,
             colorScheme: colorScheme,
@@ -182,10 +209,6 @@ class TaskCard extends StatelessWidget {
               ),
               titleMaxLines: 2,
               titleBottomSpacing: AppSpacing.sm,
-              completionButton: _buildCompletionButton(
-                completed: completed,
-                compact: true,
-              ),
               overflowButton: _buildOverflowButton(
                 compact: true,
                 colorScheme: colorScheme,
@@ -203,7 +226,7 @@ class TaskCard extends StatelessWidget {
               compact: true,
             ),
             if (showCategory) ...<Widget>[
-              const Spacer(),
+              const SizedBox(height: AppSpacing.lg),
               _TaskTertiaryMeta(
                 categoryLabel: task.category.label,
                 scheduleLabel: task.deadline != null ? _timeLabel : null,
@@ -235,23 +258,6 @@ class TaskCard extends StatelessWidget {
     );
   }
 
-  Widget _buildCompletionButton({
-    required bool completed,
-    required bool compact,
-  }) {
-    return IconButton.filledTonal(
-      key: Key('task-completion-button-${task.id}'),
-      visualDensity: compact ? VisualDensity.compact : null,
-      tooltip: completed ? 'Вернуть в активные' : 'Отметить выполненной',
-      onPressed: onToggleCompleted,
-      icon: Icon(
-        completed
-            ? Icons.check_circle_rounded
-            : Icons.radio_button_unchecked_rounded,
-      ),
-    );
-  }
-
   Widget _buildPrimaryMetaRow({required bool compact}) {
     final List<Widget> chips = <Widget>[
       Builder(
@@ -276,17 +282,6 @@ class TaskCard extends StatelessWidget {
         _TaskMetaChip(
           icon: Icons.checklist_rounded,
           label: '${task.completedSubtaskCount}/${task.totalSubtaskCount}',
-          compact: compact,
-        ),
-      );
-    }
-
-    if (task.isCompleted) {
-      chips.add(
-        _TaskMetaChip(
-          icon: Icons.done_all_rounded,
-          label: TaskStatus.completed.label,
-          tone: _TaskMetaTone.primary,
           compact: compact,
         ),
       );
@@ -537,12 +532,14 @@ class _TaskInteractiveShell extends StatefulWidget {
   const _TaskInteractiveShell({
     required this.child,
     required this.onTap,
+    required this.onDoubleTap,
     required this.tileKey,
     super.key,
   });
 
   final Widget child;
   final VoidCallback onTap;
+  final VoidCallback? onDoubleTap;
   final Key tileKey;
 
   @override
@@ -550,8 +547,17 @@ class _TaskInteractiveShell extends StatefulWidget {
 }
 
 class _TaskInteractiveShellState extends State<_TaskInteractiveShell> {
+  static const Duration _desktopDoubleTapWindow = Duration(milliseconds: 220);
+
   bool _hovered = false;
   bool _pressed = false;
+  Timer? _pendingTapTimer;
+
+  @override
+  void dispose() {
+    _pendingTapTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -561,6 +567,7 @@ class _TaskInteractiveShellState extends State<_TaskInteractiveShell> {
     final bool active = _hovered || _pressed;
 
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: AnimatedContainer(
@@ -592,7 +599,7 @@ class _TaskInteractiveShellState extends State<_TaskInteractiveShell> {
           child: InkWell(
             key: widget.tileKey,
             borderRadius: BorderRadius.circular(AppRadii.card),
-            onTap: widget.onTap,
+            onTap: _handleTap,
             onHighlightChanged: (bool value) {
               if (_pressed != value && mounted) {
                 setState(() => _pressed = value);
@@ -610,6 +617,29 @@ class _TaskInteractiveShellState extends State<_TaskInteractiveShell> {
       ),
     );
   }
+
+  void _handleTap() {
+    final VoidCallback? onDoubleTap = widget.onDoubleTap;
+    if (onDoubleTap == null) {
+      widget.onTap();
+      return;
+    }
+
+    if (_pendingTapTimer?.isActive ?? false) {
+      _pendingTapTimer?.cancel();
+      _pendingTapTimer = null;
+      onDoubleTap();
+      return;
+    }
+
+    _pendingTapTimer = Timer(_desktopDoubleTapWindow, () {
+      _pendingTapTimer = null;
+      if (!mounted) {
+        return;
+      }
+      widget.onTap();
+    });
+  }
 }
 
 class _TaskCardHeader extends StatelessWidget {
@@ -618,7 +648,6 @@ class _TaskCardHeader extends StatelessWidget {
     required this.titleStyle,
     required this.titleMaxLines,
     required this.titleBottomSpacing,
-    required this.completionButton,
     required this.overflowButton,
     required this.metaContent,
   });
@@ -627,7 +656,6 @@ class _TaskCardHeader extends StatelessWidget {
   final TextStyle? titleStyle;
   final int titleMaxLines;
   final double titleBottomSpacing;
-  final Widget completionButton;
   final Widget overflowButton;
   final Widget metaContent;
 
@@ -648,8 +676,6 @@ class _TaskCardHeader extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
-            completionButton,
-            const SizedBox(width: AppSpacing.xs),
             overflowButton,
           ],
         ),

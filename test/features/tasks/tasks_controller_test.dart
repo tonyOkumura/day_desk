@@ -245,6 +245,41 @@ void main() {
     final Task updated = (await repository.getAllTasks()).single;
     expect(updated.subtasks.single.isCompleted, isTrue);
   });
+
+  test(
+    'TasksController не завершает задачу с незакрытыми подпунктами и показывает info notification',
+    () async {
+      final Task task = _task(
+        id: 'task-guard',
+        title: 'Разобрать покупки',
+        date: DateTime(2026, 3, 18),
+        subtasks: const <TaskChecklistItem>[
+          TaskChecklistItem(id: 'sub-1', title: 'Купить молоко', sortOrder: 0),
+        ],
+      );
+      final FakeTaskRepository repository = FakeTaskRepository(
+        initialTasks: <Task>[task],
+      );
+      final RecordingTaskNotificationService notifications =
+          RecordingTaskNotificationService();
+      final TasksController controller = TasksController(
+        repository: repository,
+        dateFormatter: AppDateFormatter(),
+        logger: AppLogger(),
+        notificationService: notifications,
+      );
+
+      await controller.toggleTaskCompletion(task);
+
+      final Task unchanged = (await repository.getAllTasks()).single;
+      expect(unchanged.status, TaskStatus.pending);
+      expect(notifications.infoEvents, hasLength(1));
+      expect(
+        notifications.infoEvents.single.title,
+        'Сначала заверши подпункты',
+      );
+    },
+  );
 }
 
 Task _task({
@@ -274,8 +309,23 @@ Task _task({
 class RecordingTaskNotificationService extends AppNotificationService {
   RecordingTaskNotificationService() : super(logger: AppLogger());
 
+  final List<({String title, String message})> infoEvents =
+      <({String title, String message})>[];
+  final List<({String title, String message})> errorEvents =
+      <({String title, String message})>[];
+
   @override
   void show(NotificationConfig config) {}
+
+  @override
+  void showInfo({
+    required String title,
+    String? message,
+    VoidCallback? onTap,
+    VoidCallback? onClose,
+  }) {
+    infoEvents.add((title: title, message: message ?? ''));
+  }
 
   @override
   void showError({
@@ -283,5 +333,7 @@ class RecordingTaskNotificationService extends AppNotificationService {
     String? message,
     VoidCallback? onTap,
     VoidCallback? onClose,
-  }) {}
+  }) {
+    errorEvents.add((title: title, message: message ?? ''));
+  }
 }

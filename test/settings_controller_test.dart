@@ -231,6 +231,8 @@ ThemeController _buildThemeController() {
 class RecordingAppNotificationService extends AppNotificationService {
   RecordingAppNotificationService() : super(logger: AppLogger());
 
+  final List<({String title, String message})> infoEvents =
+      <({String title, String message})>[];
   final List<({String title, String message})> successEvents =
       <({String title, String message})>[];
   final List<({String title, String message})> errorEvents =
@@ -239,11 +241,23 @@ class RecordingAppNotificationService extends AppNotificationService {
   @override
   void show(NotificationConfig config) {
     switch (config.type) {
+      case NotificationType.info:
+        infoEvents.add((title: config.title, message: config.message ?? ''));
       case NotificationType.success:
         successEvents.add((title: config.title, message: config.message ?? ''));
       case NotificationType.error:
         errorEvents.add((title: config.title, message: config.message ?? ''));
     }
+  }
+
+  @override
+  void showInfo({
+    required String title,
+    String? message,
+    VoidCallback? onTap,
+    VoidCallback? onClose,
+  }) {
+    infoEvents.add((title: title, message: message ?? ''));
   }
 
   @override

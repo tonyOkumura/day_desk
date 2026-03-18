@@ -11,9 +11,7 @@ import '../widgets/glass_notification.dart';
 import 'notification_config.dart';
 
 class AppNotificationService {
-  AppNotificationService({
-    required AppLogger logger,
-  }) : _logger = logger;
+  AppNotificationService({required AppLogger logger}) : _logger = logger;
 
   static const int _maxOverlayNotifications = 4;
 
@@ -60,6 +58,22 @@ class AppNotificationService {
     );
   }
 
+  void showInfo({
+    required String title,
+    String? message,
+    VoidCallback? onTap,
+    VoidCallback? onClose,
+  }) {
+    show(
+      NotificationConfig.info(
+        title: title,
+        message: message,
+        onTap: onTap,
+        onClose: onClose,
+      ),
+    );
+  }
+
   void showError({
     required String title,
     String? message,
@@ -78,10 +92,7 @@ class AppNotificationService {
 
   void dismissAll() {
     for (final _OverlayNotification notification in _notifications) {
-      _safeInvoke(
-        notification.config.onClose,
-        label: 'onClose (dismissAll)',
-      );
+      _safeInvoke(notification.config.onClose, label: 'onClose (dismissAll)');
     }
     _notifications.clear();
 
@@ -95,18 +106,12 @@ class AppNotificationService {
 
   void _enqueueOverlay(NotificationConfig config) {
     _notifications.add(
-      _OverlayNotification(
-        id: _overlayNotificationIdCounter++,
-        config: config,
-      ),
+      _OverlayNotification(id: _overlayNotificationIdCounter++, config: config),
     );
 
     if (_notifications.length > _maxOverlayNotifications) {
       final _OverlayNotification overflowed = _notifications.removeAt(0);
-      _safeInvoke(
-        overflowed.config.onClose,
-        label: 'onClose (overflow)',
-      );
+      _safeInvoke(overflowed.config.onClose, label: 'onClose (overflow)');
     }
 
     _logger.debug(
@@ -129,10 +134,7 @@ class AppNotificationService {
     }
 
     final _OverlayNotification removed = _notifications.removeAt(index);
-    _safeInvoke(
-      removed.config.onClose,
-      label: 'onClose',
-    );
+    _safeInvoke(removed.config.onClose, label: 'onClose');
 
     final BuildContext? overlayContext = Get.overlayContext;
     if (overlayContext != null) {
@@ -173,10 +175,7 @@ class AppNotificationService {
             notifications: items,
             onDismiss: _dismissById,
             onTap: (_OverlayNotification item) {
-              _safeInvoke(
-                item.config.onTap,
-                label: 'onTap',
-              );
+              _safeInvoke(item.config.onTap, label: 'onTap');
             },
             enableHoverPause: _isDesktopOrWeb(),
           );
@@ -194,10 +193,7 @@ class AppNotificationService {
     _overlayEntry = null;
   }
 
-  void _safeInvoke(
-    VoidCallback? callback, {
-    required String label,
-  }) {
+  void _safeInvoke(VoidCallback? callback, {required String label}) {
     if (callback == null) {
       return;
     }
@@ -208,9 +204,7 @@ class AppNotificationService {
       _logger.error(
         'Notification callback failed.',
         tag: 'Notifications',
-        context: <String, String>{
-          'label': label,
-        },
+        context: <String, String>{'label': label},
         error: error,
         stackTrace: stackTrace,
       );
@@ -226,10 +220,7 @@ class AppNotificationService {
 }
 
 class _OverlayNotification {
-  const _OverlayNotification({
-    required this.id,
-    required this.config,
-  });
+  const _OverlayNotification({required this.id, required this.config});
 
   final int id;
   final NotificationConfig config;
@@ -264,7 +255,9 @@ class _NotificationOverlay extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
-              children: notifications.asMap().entries
+              children: notifications
+                  .asMap()
+                  .entries
                   .map(
                     (MapEntry<int, _OverlayNotification> entry) => Padding(
                       padding: EdgeInsets.only(
@@ -335,12 +328,7 @@ class _AnimatedNotificationState extends State<_AnimatedNotification>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, -0.18),
       end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeOutCubic,
-      ),
-    );
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _fadeAnimation = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeOut,
@@ -433,10 +421,12 @@ class _AnimatedNotificationState extends State<_AnimatedNotification>
     final NotificationType type = widget.config.type;
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
     final Color accentColor = switch (type) {
+      NotificationType.info => colorScheme.secondary,
       NotificationType.success => colorScheme.primary,
       NotificationType.error => colorScheme.error,
     };
     final IconData icon = switch (type) {
+      NotificationType.info => Icons.info_outline_rounded,
       NotificationType.success => Icons.check_circle_rounded,
       NotificationType.error => Icons.error_rounded,
     };

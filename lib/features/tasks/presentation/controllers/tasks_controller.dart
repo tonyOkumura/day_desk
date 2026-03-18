@@ -163,6 +163,14 @@ class TasksController extends GetxController {
   }
 
   Future<void> toggleTaskCompletion(Task task) async {
+    if (!task.isCompleted && task.hasIncompleteSubtasks) {
+      _notificationService.showInfo(
+        title: 'Сначала заверши подпункты',
+        message: 'У задачи остались незакрытые шаги.',
+      );
+      return;
+    }
+
     try {
       await _repository.markTaskCompleted(
         task.id,

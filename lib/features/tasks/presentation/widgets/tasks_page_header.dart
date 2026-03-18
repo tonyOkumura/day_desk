@@ -105,6 +105,7 @@ class _TasksPageHeaderState extends State<TasksPageHeader> {
             tooltip: 'Новая задача',
             onPressed: _openAddTask,
           ),
+          const SizedBox(width: AppSpacing.md),
           CompositedTransformTarget(
             link: _filterLink,
             child: Builder(

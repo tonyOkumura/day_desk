@@ -14,7 +14,6 @@ import '../../../../core/widgets/app_surface_card.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/task_category.dart';
 import '../../domain/entities/task_checklist_item.dart';
-import '../../domain/entities/task_quadrant.dart';
 import '../controllers/task_editor_controller.dart';
 
 class TaskEditorDialog extends StatefulWidget {
@@ -71,7 +70,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
           key: const Key('task-editor-dialog'),
           insetPadding: const EdgeInsets.all(AppSpacing.xl),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 860, maxHeight: 860),
+            constraints: const BoxConstraints(maxWidth: 760, maxHeight: 820),
             child: Material(
               color: Theme.of(context).colorScheme.surface,
               child: Column(
@@ -231,6 +230,8 @@ class _TaskEditorFormBody extends StatefulWidget {
 
 class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
   late final TextEditingController _titleController;
+  late final TextEditingController _draftSubtaskController;
+  late final FocusNode _draftSubtaskFocusNode;
 
   @override
   void initState() {
@@ -239,11 +240,15 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
       ..addListener(() {
         widget.controller.updateTitle(_titleController.text);
       });
+    _draftSubtaskController = TextEditingController();
+    _draftSubtaskFocusNode = FocusNode(debugLabel: 'task-editor-draft-subtask');
   }
 
   @override
   void dispose() {
     _titleController.dispose();
+    _draftSubtaskController.dispose();
+    _draftSubtaskFocusNode.dispose();
     super.dispose();
   }
 
@@ -332,6 +337,22 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
     }
   }
 
+  void _submitDraftSubtask() {
+    final String value = _draftSubtaskController.text.trim();
+    if (value.isEmpty) {
+      _draftSubtaskFocusNode.requestFocus();
+      return;
+    }
+
+    widget.controller.addSubtask(value);
+    _draftSubtaskController.clear();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _draftSubtaskFocusNode.requestFocus();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool compact = MediaQuery.sizeOf(context).width < 760;
@@ -354,44 +375,55 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
                     errorText: widget.controller.titleError,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
-                Text(
-                  'Квадрант Эйзенхауэра',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                const SizedBox(height: AppSpacing.lg),
+                if (compact)
+                  Column(
+                    children: <Widget>[
+                      _TaskBinaryToggleGroup(
+                        key: const Key('task-editor-importance-toggle'),
+                        title: 'Важно',
+                        selected: widget.controller.isImportant,
+                        selectedLabel: 'Важно',
+                        unselectedLabel: 'Не важно',
+                        onChanged: widget.controller.updateImportance,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _TaskBinaryToggleGroup(
+                        key: const Key('task-editor-urgency-toggle'),
+                        title: 'Срочно',
+                        selected: widget.controller.isUrgent,
+                        selectedLabel: 'Срочно',
+                        unselectedLabel: 'Не срочно',
+                        onChanged: widget.controller.updateUrgency,
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: _TaskBinaryToggleGroup(
+                          key: const Key('task-editor-importance-toggle'),
+                          title: 'Важно',
+                          selected: widget.controller.isImportant,
+                          selectedLabel: 'Важно',
+                          unselectedLabel: 'Не важно',
+                          onChanged: widget.controller.updateImportance,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(
+                        child: _TaskBinaryToggleGroup(
+                          key: const Key('task-editor-urgency-toggle'),
+                          title: 'Срочно',
+                          selected: widget.controller.isUrgent,
+                          selectedLabel: 'Срочно',
+                          unselectedLabel: 'Не срочно',
+                          onChanged: widget.controller.updateUrgency,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Wrap(
-                  key: const Key('task-editor-quadrant-selector'),
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: widget.controller.quadrantOptions
-                      .map((TaskQuadrant quadrant) {
-                        final bool selected =
-                            widget.controller.quadrant == quadrant;
-                        return ChoiceChip(
-                          key: Key(
-                            'task-editor-quadrant-option-${quadrant.name}',
-                          ),
-                          label: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              Text(quadrant.label),
-                              Text(
-                                quadrant.subtitle,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ],
-                          ),
-                          selected: selected,
-                          onSelected: (_) =>
-                              widget.controller.updateQuadrant(quadrant),
-                        );
-                      })
-                      .toList(growable: false),
-                ),
               ],
             ),
           ),
@@ -400,41 +432,7 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            'Подпункты',
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            'Разбей задачу на короткие actionable-шаги.',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
-                      ),
-                    ),
-                    AppButton(
-                      key: const Key('task-editor-add-subtask-button'),
-                      label: 'Добавить',
-                      icon: Icons.add_rounded,
-                      variant: AppButtonVariant.secondary,
-                      onPressed: () => widget.controller.addSubtask(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                if (widget.controller.subtasks.isEmpty)
-                  Text(
-                    'Подпунктов пока нет. Добавь, чтобы превратить задачу в понятный план.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  )
-                else
+                if (widget.controller.subtasks.isNotEmpty)
                   ReorderableListView.builder(
                     key: const Key('task-editor-subtask-list'),
                     shrinkWrap: true,
@@ -462,6 +460,23 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
                       );
                     },
                   ),
+                if (widget.controller.subtasks.isNotEmpty)
+                  const SizedBox(height: AppSpacing.sm),
+                _DraftChecklistEditorRow(
+                  controller: _draftSubtaskController,
+                  focusNode: _draftSubtaskFocusNode,
+                  onSubmitted: _submitDraftSubtask,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton.filledTonal(
+                    key: const Key('task-editor-add-subtask-button'),
+                    tooltip: 'Добавить подпункт',
+                    onPressed: _submitDraftSubtask,
+                    icon: const Icon(Icons.add_rounded),
+                  ),
+                ),
               ],
             ),
           ),
@@ -651,9 +666,7 @@ class _ChecklistEditorRow extends StatelessWidget {
               initialValue: item.title,
               textCapitalization: TextCapitalization.sentences,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                hintText: 'Например, купить молоко',
-              ),
+              decoration: const InputDecoration(hintText: 'Подпункт'),
               onChanged: onChanged,
               onFieldSubmitted: onSubmitted,
             ),
@@ -665,6 +678,89 @@ class _ChecklistEditorRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _TaskBinaryToggleGroup extends StatelessWidget {
+  const _TaskBinaryToggleGroup({
+    required this.title,
+    required this.selected,
+    required this.selectedLabel,
+    required this.unselectedLabel,
+    required this.onChanged,
+    super.key,
+  });
+
+  final String title;
+  final bool selected;
+  final String selectedLabel;
+  final String unselectedLabel;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        SegmentedButton<bool>(
+          segments: <ButtonSegment<bool>>[
+            ButtonSegment<bool>(value: true, label: Text(selectedLabel)),
+            ButtonSegment<bool>(value: false, label: Text(unselectedLabel)),
+          ],
+          selected: <bool>{selected},
+          showSelectedIcon: false,
+          onSelectionChanged: (Set<bool> next) {
+            onChanged(next.first);
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _DraftChecklistEditorRow extends StatelessWidget {
+  const _DraftChecklistEditorRow({
+    required this.controller,
+    required this.focusNode,
+    required this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final VoidCallback onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Icon(
+          Icons.add_task_rounded,
+          size: 20,
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: TextField(
+            key: const Key('task-editor-subtask-draft-field'),
+            controller: controller,
+            focusNode: focusNode,
+            textCapitalization: TextCapitalization.sentences,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(hintText: 'Новый подпункт'),
+            onSubmitted: (_) => onSubmitted(),
+          ),
+        ),
+      ],
     );
   }
 }

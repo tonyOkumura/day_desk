@@ -63,6 +63,9 @@ void main() {
       );
 
       expect(controller.reminderPreset, ReminderLeadTimePreset.hour1);
+      expect(controller.quadrant, TaskQuadrant.later);
+      expect(controller.isImportant, isFalse);
+      expect(controller.isUrgent, isFalse);
       expect(controller.resolvedReminderAt, isNull);
       expect(
         controller.reminderHelperText,
@@ -180,7 +183,7 @@ void main() {
       expect(created, isNotNull);
       expect(created!.reminderPreset, ReminderLeadTimePreset.minutes15);
       expect(created.reminderAt, isNull);
-      expect(created.quadrant, TaskQuadrant.schedule);
+      expect(created.quadrant, TaskQuadrant.later);
     },
   );
 
@@ -209,11 +212,23 @@ void main() {
 class RecordingTaskNotificationService extends AppNotificationService {
   RecordingTaskNotificationService() : super(logger: AppLogger());
 
+  final List<({String title, String message})> infoEvents =
+      <({String title, String message})>[];
   final List<({String title, String message})> errorEvents =
       <({String title, String message})>[];
 
   @override
   void show(NotificationConfig config) {}
+
+  @override
+  void showInfo({
+    required String title,
+    String? message,
+    VoidCallback? onTap,
+    VoidCallback? onClose,
+  }) {
+    infoEvents.add((title: title, message: message ?? ''));
+  }
 
   @override
   void showError({

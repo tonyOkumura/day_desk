@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
@@ -34,15 +35,17 @@ class TasksContentPage extends GetView<TasksController> {
 
       return PageContentFrame(
         storageKey: AppDestination.tasks.pageStorageKey,
-        widthPolicy: matrixMode
-            ? PageContentWidthPolicy.fluid
-            : PageContentWidthPolicy.standard,
+        widthPolicy: PageContentWidthPolicy.fluid,
+        maxContentWidth: double.infinity,
         builder: (BuildContext context, PageContentLayout frame) {
           return LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               return Obx(() {
                 final _TaskMatrixLayoutMode matrixLayout =
                     _matrixLayoutForWidth(constraints.maxWidth);
+                final bool enableDoubleTapEdit = _supportsDesktopDoubleTapEdit(
+                  width: constraints.maxWidth,
+                );
                 final List<Task> tasks = controller.visibleTasks;
                 final List<TaskQuadrantGroup> groups = controller.matrixGroups;
 
@@ -109,6 +112,7 @@ class TasksContentPage extends GetView<TasksController> {
                         groups: groups,
                         layout: matrixLayout,
                         availableHeight: frame.contentHeight,
+                        enableDoubleTapEdit: enableDoubleTapEdit,
                         onOpenEditor: (Task task) =>
                             _openTaskEditor(context, task: task),
                         onConfirmDelete: (Task task) =>
@@ -120,6 +124,7 @@ class TasksContentPage extends GetView<TasksController> {
                       _TaskListBoard(
                         controller: controller,
                         tasks: tasks,
+                        enableDoubleTapEdit: enableDoubleTapEdit,
                         onOpenEditor: (Task task) =>
                             _openTaskEditor(context, task: task),
                         onConfirmDelete: (Task task) =>
@@ -145,6 +150,17 @@ class TasksContentPage extends GetView<TasksController> {
       return _TaskMatrixLayoutMode.medium;
     }
     return _TaskMatrixLayoutMode.wide;
+  }
+
+  bool _supportsDesktopDoubleTapEdit({required double width}) {
+    if (width < AppBreakpoints.compactNavigation) {
+      return false;
+    }
+
+    return kIsWeb ||
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows;
   }
 
   Future<void> _pickRescheduleDate(BuildContext context, Task task) async {
@@ -191,6 +207,7 @@ class _TaskMatrixBoard extends StatelessWidget {
     required this.groups,
     required this.layout,
     required this.availableHeight,
+    required this.enableDoubleTapEdit,
     required this.onOpenEditor,
     required this.onConfirmDelete,
     required this.onReschedule,
@@ -200,6 +217,7 @@ class _TaskMatrixBoard extends StatelessWidget {
   final List<TaskQuadrantGroup> groups;
   final _TaskMatrixLayoutMode layout;
   final double availableHeight;
+  final bool enableDoubleTapEdit;
   final ValueChanged<Task> onOpenEditor;
   final ValueChanged<Task> onConfirmDelete;
   final ValueChanged<Task> onReschedule;
@@ -221,6 +239,7 @@ class _TaskMatrixBoard extends StatelessWidget {
                       controller.setQuadrantExpanded(group.quadrant, expanded);
                     },
                     controller: controller,
+                    enableDoubleTapEdit: false,
                     onOpenEditor: onOpenEditor,
                     onConfirmDelete: onConfirmDelete,
                     onReschedule: onReschedule,
@@ -265,6 +284,7 @@ class _TaskMatrixBoard extends StatelessWidget {
                     group: doNow,
                     dense: layout == _TaskMatrixLayoutMode.medium,
                     controller: controller,
+                    enableDoubleTapEdit: enableDoubleTapEdit,
                     onOpenEditor: onOpenEditor,
                     onConfirmDelete: onConfirmDelete,
                     onReschedule: onReschedule,
@@ -276,6 +296,7 @@ class _TaskMatrixBoard extends StatelessWidget {
                     group: schedule,
                     dense: layout == _TaskMatrixLayoutMode.medium,
                     controller: controller,
+                    enableDoubleTapEdit: enableDoubleTapEdit,
                     onOpenEditor: onOpenEditor,
                     onConfirmDelete: onConfirmDelete,
                     onReschedule: onReschedule,
@@ -294,6 +315,7 @@ class _TaskMatrixBoard extends StatelessWidget {
                     group: quickWins,
                     dense: layout == _TaskMatrixLayoutMode.medium,
                     controller: controller,
+                    enableDoubleTapEdit: enableDoubleTapEdit,
                     onOpenEditor: onOpenEditor,
                     onConfirmDelete: onConfirmDelete,
                     onReschedule: onReschedule,
@@ -305,6 +327,7 @@ class _TaskMatrixBoard extends StatelessWidget {
                     group: later,
                     dense: layout == _TaskMatrixLayoutMode.medium,
                     controller: controller,
+                    enableDoubleTapEdit: enableDoubleTapEdit,
                     onOpenEditor: onOpenEditor,
                     onConfirmDelete: onConfirmDelete,
                     onReschedule: onReschedule,
@@ -323,6 +346,7 @@ class _TaskListBoard extends StatelessWidget {
   const _TaskListBoard({
     required this.controller,
     required this.tasks,
+    required this.enableDoubleTapEdit,
     required this.onOpenEditor,
     required this.onConfirmDelete,
     required this.onReschedule,
@@ -330,43 +354,59 @@ class _TaskListBoard extends StatelessWidget {
 
   final TasksController controller;
   final List<Task> tasks;
+  final bool enableDoubleTapEdit;
   final ValueChanged<Task> onOpenEditor;
   final ValueChanged<Task> onConfirmDelete;
   final ValueChanged<Task> onReschedule;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          'Показано задач: ${tasks.length}',
-          key: const Key('task-list-results-count'),
-          style: Theme.of(
-            context,
-          ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        Column(
-          key: const Key('tasks-list'),
-          children: tasks
-              .map(
-                (Task task) => Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                  child: _TaskCardHost(
-                    task: task,
-                    controller: controller,
-                    enableDrag: false,
-                    density: TaskCardDensity.comfortable,
-                    onOpenEditor: onOpenEditor,
-                    onConfirmDelete: onConfirmDelete,
-                    onReschedule: onReschedule,
-                  ),
-                ),
-              )
-              .toList(growable: false),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final _TaskListGridLayout gridLayout = _TaskListGridLayout.forWidth(
+          constraints.maxWidth,
+        );
+        final double itemWidth =
+            (constraints.maxWidth -
+                (gridLayout.columns - 1) * gridLayout.spacing) /
+            gridLayout.columns;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              'Показано задач: ${tasks.length}',
+              key: const Key('task-list-results-count'),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Wrap(
+              key: Key('tasks-list-grid-${gridLayout.columns}'),
+              spacing: gridLayout.spacing,
+              runSpacing: gridLayout.spacing,
+              children: tasks
+                  .map(
+                    (Task task) => SizedBox(
+                      width: itemWidth,
+                      child: _TaskCardHost(
+                        task: task,
+                        controller: controller,
+                        enableDrag: false,
+                        density: gridLayout.density,
+                        enableDoubleTapEdit: enableDoubleTapEdit,
+                        onOpenEditor: onOpenEditor,
+                        onConfirmDelete: onConfirmDelete,
+                        onReschedule: onReschedule,
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -376,6 +416,7 @@ class _WideQuadrantSection extends StatelessWidget {
     required this.group,
     required this.dense,
     required this.controller,
+    required this.enableDoubleTapEdit,
     required this.onOpenEditor,
     required this.onConfirmDelete,
     required this.onReschedule,
@@ -384,6 +425,7 @@ class _WideQuadrantSection extends StatelessWidget {
   final TaskQuadrantGroup group;
   final bool dense;
   final TasksController controller;
+  final bool enableDoubleTapEdit;
   final ValueChanged<Task> onOpenEditor;
   final ValueChanged<Task> onConfirmDelete;
   final ValueChanged<Task> onReschedule;
@@ -435,6 +477,7 @@ class _WideQuadrantSection extends StatelessWidget {
                   group: group,
                   dense: dense,
                   controller: controller,
+                  enableDoubleTapEdit: enableDoubleTapEdit,
                   enableDrag: true,
                   onOpenEditor: onOpenEditor,
                   onConfirmDelete: onConfirmDelete,
@@ -453,6 +496,7 @@ class _CompactQuadrantSection extends StatelessWidget {
     required this.expanded,
     required this.onExpandedChanged,
     required this.controller,
+    required this.enableDoubleTapEdit,
     required this.onOpenEditor,
     required this.onConfirmDelete,
     required this.onReschedule,
@@ -462,6 +506,7 @@ class _CompactQuadrantSection extends StatelessWidget {
   final bool expanded;
   final ValueChanged<bool> onExpandedChanged;
   final TasksController controller;
+  final bool enableDoubleTapEdit;
   final ValueChanged<Task> onOpenEditor;
   final ValueChanged<Task> onConfirmDelete;
   final ValueChanged<Task> onReschedule;
@@ -477,6 +522,7 @@ class _CompactQuadrantSection extends StatelessWidget {
       child: _QuadrantTaskList(
         group: group,
         controller: controller,
+        enableDoubleTapEdit: enableDoubleTapEdit,
         enableDrag: false,
         onOpenEditor: onOpenEditor,
         onConfirmDelete: onConfirmDelete,
@@ -491,6 +537,7 @@ class _QuadrantSectionBody extends StatelessWidget {
     required this.group,
     required this.dense,
     required this.controller,
+    required this.enableDoubleTapEdit,
     required this.enableDrag,
     required this.onOpenEditor,
     required this.onConfirmDelete,
@@ -500,6 +547,7 @@ class _QuadrantSectionBody extends StatelessWidget {
   final TaskQuadrantGroup group;
   final bool dense;
   final TasksController controller;
+  final bool enableDoubleTapEdit;
   final bool enableDrag;
   final ValueChanged<Task> onOpenEditor;
   final ValueChanged<Task> onConfirmDelete;
@@ -516,6 +564,7 @@ class _QuadrantSectionBody extends StatelessWidget {
           child: _QuadrantTaskViewport(
             group: group,
             controller: controller,
+            enableDoubleTapEdit: enableDoubleTapEdit,
             enableDrag: enableDrag,
             onOpenEditor: onOpenEditor,
             onConfirmDelete: onConfirmDelete,
@@ -586,6 +635,7 @@ class _QuadrantTaskList extends StatelessWidget {
   const _QuadrantTaskList({
     required this.group,
     required this.controller,
+    required this.enableDoubleTapEdit,
     required this.enableDrag,
     required this.onOpenEditor,
     required this.onConfirmDelete,
@@ -594,6 +644,7 @@ class _QuadrantTaskList extends StatelessWidget {
 
   final TaskQuadrantGroup group;
   final TasksController controller;
+  final bool enableDoubleTapEdit;
   final bool enableDrag;
   final ValueChanged<Task> onOpenEditor;
   final ValueChanged<Task> onConfirmDelete;
@@ -618,6 +669,7 @@ class _QuadrantTaskList extends StatelessWidget {
                 controller: controller,
                 enableDrag: enableDrag,
                 density: TaskCardDensity.comfortable,
+                enableDoubleTapEdit: enableDoubleTapEdit,
                 onOpenEditor: onOpenEditor,
                 onConfirmDelete: onConfirmDelete,
                 onReschedule: onReschedule,
@@ -633,6 +685,7 @@ class _QuadrantTaskViewport extends StatefulWidget {
   const _QuadrantTaskViewport({
     required this.group,
     required this.controller,
+    required this.enableDoubleTapEdit,
     required this.enableDrag,
     required this.onOpenEditor,
     required this.onConfirmDelete,
@@ -642,6 +695,7 @@ class _QuadrantTaskViewport extends StatefulWidget {
 
   final TaskQuadrantGroup group;
   final TasksController controller;
+  final bool enableDoubleTapEdit;
   final bool enableDrag;
   final ValueChanged<Task> onOpenEditor;
   final ValueChanged<Task> onConfirmDelete;
@@ -712,6 +766,7 @@ class _QuadrantTaskViewportState extends State<_QuadrantTaskViewport> {
                   controller: widget.controller,
                   enableDrag: widget.enableDrag,
                   density: TaskCardDensity.compact,
+                  enableDoubleTapEdit: widget.enableDoubleTapEdit,
                   onOpenEditor: widget.onOpenEditor,
                   onConfirmDelete: widget.onConfirmDelete,
                   onReschedule: widget.onReschedule,
@@ -738,6 +793,7 @@ class _QuadrantTaskViewportState extends State<_QuadrantTaskViewport> {
                 controller: widget.controller,
                 enableDrag: widget.enableDrag,
                 density: TaskCardDensity.comfortable,
+                enableDoubleTapEdit: widget.enableDoubleTapEdit,
                 onOpenEditor: widget.onOpenEditor,
                 onConfirmDelete: widget.onConfirmDelete,
                 onReschedule: widget.onReschedule,
@@ -756,6 +812,7 @@ class _TaskCardHost extends StatelessWidget {
     required this.controller,
     required this.enableDrag,
     required this.density,
+    required this.enableDoubleTapEdit,
     required this.onOpenEditor,
     required this.onConfirmDelete,
     required this.onReschedule,
@@ -765,6 +822,7 @@ class _TaskCardHost extends StatelessWidget {
   final TasksController controller;
   final bool enableDrag;
   final TaskCardDensity density;
+  final bool enableDoubleTapEdit;
   final ValueChanged<Task> onOpenEditor;
   final ValueChanged<Task> onConfirmDelete;
   final ValueChanged<Task> onReschedule;
@@ -777,6 +835,7 @@ class _TaskCardHost extends StatelessWidget {
       dateFormatter: Get.find<AppDateFormatter>(),
       onToggleCompleted: () => controller.toggleTaskCompletion(task),
       onEdit: () => onOpenEditor(task),
+      enableDoubleTapEdit: enableDoubleTapEdit,
       onDelete: () => onConfirmDelete(task),
       onReschedule: () => onReschedule(task),
       onReclassify: (TaskQuadrant quadrant) =>
@@ -804,7 +863,41 @@ class _TaskCardHost extends StatelessWidget {
         opacity: 0.36,
         child: IgnorePointer(child: card),
       ),
-      child: MouseRegion(cursor: SystemMouseCursors.grab, child: card),
+      child: MouseRegion(cursor: SystemMouseCursors.click, child: card),
     );
   }
+}
+
+class _TaskListGridLayout {
+  const _TaskListGridLayout({
+    required this.columns,
+    required this.density,
+    required this.spacing,
+  });
+
+  factory _TaskListGridLayout.forWidth(double width) {
+    if (width >= 1380) {
+      return const _TaskListGridLayout(
+        columns: 3,
+        density: TaskCardDensity.compact,
+        spacing: AppSpacing.lg,
+      );
+    }
+    if (width >= 760) {
+      return const _TaskListGridLayout(
+        columns: 2,
+        density: TaskCardDensity.comfortable,
+        spacing: AppSpacing.lg,
+      );
+    }
+    return const _TaskListGridLayout(
+      columns: 1,
+      density: TaskCardDensity.comfortable,
+      spacing: AppSpacing.lg,
+    );
+  }
+
+  final int columns;
+  final TaskCardDensity density;
+  final double spacing;
 }
