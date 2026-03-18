@@ -11,6 +11,7 @@ import '../../../../app/theme/app_typography.dart';
 import '../../../../core/app_info/app_info_service.dart';
 import '../../../../core/date/app_date_formatter.dart';
 import '../../../../core/reminders/reminder_lead_time_preset.dart';
+import '../../../../core/widgets/adaptive_section_grid.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../core/widgets/app_dropdown_field.dart';
@@ -32,8 +33,7 @@ class SettingsContentPage extends GetView<SettingsController> {
 
     return PageContentFrame(
       storageKey: AppDestination.settings.pageStorageKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: AdaptiveSectionGrid(
         children: <Widget>[
           AppSectionCard(
             title: 'Режим темы',
@@ -56,7 +56,6 @@ class SettingsContentPage extends GetView<SettingsController> {
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.xl),
           AppSectionCard(
             title: 'Рабочий день',
             description:
@@ -113,7 +112,6 @@ class SettingsContentPage extends GetView<SettingsController> {
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.xl),
           AppSectionCard(
             title: 'Свободные окна и напоминания',
             description:
@@ -192,7 +190,6 @@ class SettingsContentPage extends GetView<SettingsController> {
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.xl),
           AppSectionCard(
             title: 'Палитра',
             description:
@@ -214,7 +211,6 @@ class SettingsContentPage extends GetView<SettingsController> {
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.xl),
           AppSectionCard(
             key: const Key('about-section'),
             title: 'О приложении',
@@ -241,7 +237,6 @@ class SettingsContentPage extends GetView<SettingsController> {
               ],
             ),
           ),
-          const SizedBox(height: AppSpacing.xl),
           AppSectionCard(
             key: const Key('reset-settings-section'),
             title: 'Сброс настроек',
@@ -275,7 +270,6 @@ class SettingsContentPage extends GetView<SettingsController> {
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.xl),
           AppSectionCard(
             title: 'Фундамент уже готов',
             description:

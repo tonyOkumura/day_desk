@@ -1,13 +1,9 @@
 import 'dart:async';
-import 'dart:math';
-
 import 'package:get/get.dart';
 
 import '../../../../core/date/app_date_formatter.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../core/notifications/app_notification_service.dart';
-import '../../../settings/domain/entities/app_settings.dart';
-import '../../../settings/domain/repositories/app_settings_repository.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/task_checklist_item.dart';
 import '../../domain/entities/task_quadrant.dart';
@@ -18,19 +14,16 @@ import '../models/task_list_options.dart';
 class TasksController extends GetxController {
   TasksController({
     required TaskRepository repository,
-    required AppSettingsRepository settingsRepository,
     required AppDateFormatter dateFormatter,
     required AppLogger logger,
     required AppNotificationService notificationService,
   }) : _repository = repository,
-       _settingsRepository = settingsRepository,
        _dateFormatter = dateFormatter,
        _logger = logger,
        _notificationService = notificationService,
        _selectedDate = dateFormatter.startOfDay(DateTime.now()).obs;
 
   final TaskRepository _repository;
-  final AppSettingsRepository _settingsRepository;
   final AppDateFormatter _dateFormatter;
   final AppLogger _logger;
   final AppNotificationService _notificationService;
@@ -45,8 +38,12 @@ class TasksController extends GetxController {
   final Rx<TaskCategoryFilter> _categoryFilter = TaskCategoryFilter.all.obs;
   final Rx<TaskListSortOption> _listSortOption =
       TaskListSortOption.deadlineFirst.obs;
-  final RxString _quickCaptureTitle = ''.obs;
-  final Rx<TaskQuadrant> _quickCaptureQuadrant = TaskQuadrant.schedule.obs;
+  final RxString _searchQuery = ''.obs;
+  final RxMap<TaskQuadrant, bool> _compactQuadrantExpanded =
+      <TaskQuadrant, bool>{
+        for (final TaskQuadrant quadrant in TaskQuadrant.values)
+          quadrant: true,
+      }.obs;
 
   StreamSubscription<List<Task>>? _subscription;
 
@@ -61,14 +58,27 @@ class TasksController extends GetxController {
   TaskStatusFilter get statusFilter => _statusFilter.value;
   TaskCategoryFilter get categoryFilter => _categoryFilter.value;
   TaskListSortOption get listSortOption => _listSortOption.value;
+  String get searchQuery => _searchQuery.value;
   bool get isLoading => _loading.value;
   String? get errorMessage => _errorMessage.value;
   bool get hasError => _errorMessage.value != null;
   bool get hasSourceTasks => _tasks.isNotEmpty;
   String get selectedDateLabel => _dateFormatter.formatFullDate(selectedDate);
-  String get quickCaptureTitle => _quickCaptureTitle.value;
-  TaskQuadrant get quickCaptureQuadrant => _quickCaptureQuadrant.value;
-  bool get canSubmitQuickCapture => quickCaptureTitle.trim().isNotEmpty;
+  bool get hasActiveFilters {
+    final DateTime today = _dateFormatter.startOfDay(DateTime.now());
+    return scopeMode != TaskScopeMode.forDay ||
+        !_dateFormatter.isSameDay(selectedDate, today) ||
+        statusFilter != TaskStatusFilter.active ||
+        categoryFilter != TaskCategoryFilter.all;
+  }
+
+  bool get hasActiveSortOverride {
+    return listSortOption != TaskListSortOption.deadlineFirst;
+  }
+
+  bool isQuadrantExpanded(TaskQuadrant quadrant) {
+    return _compactQuadrantExpanded[quadrant] ?? true;
+  }
 
   List<Task> get visibleTasks {
     final List<Task> sorted = _filteredTasks.toList(growable: false);
@@ -138,59 +148,24 @@ class TasksController extends GetxController {
     _listSortOption.value = option;
   }
 
-  void updateQuickCaptureTitle(String value) {
-    _quickCaptureTitle.value = value;
+  void updateSearchQuery(String value) {
+    _searchQuery.value = value;
   }
 
-  void updateQuickCaptureQuadrant(TaskQuadrant value) {
-    _quickCaptureQuadrant.value = value;
+  void setQuadrantExpanded(TaskQuadrant quadrant, bool expanded) {
+    _compactQuadrantExpanded[quadrant] = expanded;
   }
 
-  Future<void> submitQuickCapture() async {
-    final String title = quickCaptureTitle.trim();
-    if (title.isEmpty) {
-      return;
-    }
+  Future<void> resetFilters() async {
+    _statusFilter.value = TaskStatusFilter.active;
+    _categoryFilter.value = TaskCategoryFilter.all;
+    _scopeMode.value = TaskScopeMode.forDay;
+    _selectedDate.value = _dateFormatter.startOfDay(DateTime.now());
+    await _bindTasks();
+  }
 
-    try {
-      final AppSettings settings = await _settingsRepository.readSettings();
-      final DateTime date = scopeMode == TaskScopeMode.forDay
-          ? selectedDate
-          : _dateFormatter.startOfDay(DateTime.now());
-      final DateTime now = DateTime.now();
-
-      await _repository.createTask(
-        Task(
-          id: _generateId(),
-          title: title,
-          date: date,
-          reminderPreset: settings.defaultReminderPreset,
-          isUrgent: quickCaptureQuadrant.isUrgent,
-          isImportant: quickCaptureQuadrant.isImportant,
-          status: TaskStatus.pending,
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-
-      _quickCaptureTitle.value = '';
-      _quickCaptureQuadrant.value = TaskQuadrant.schedule;
-    } catch (error, stackTrace) {
-      _logger.error(
-        'Failed to create quick task.',
-        tag: 'TasksController',
-        context: <String, Object?>{
-          'scopeMode': scopeMode.name,
-          'quadrant': quickCaptureQuadrant.name,
-        },
-        error: error,
-        stackTrace: stackTrace,
-      );
-      _notificationService.showError(
-        title: 'Не удалось создать задачу',
-        message: 'Быстрый захват не сохранился. Попробуй ещё раз.',
-      );
-    }
+  void resetSort() {
+    _listSortOption.value = TaskListSortOption.deadlineFirst;
   }
 
   Future<void> retryLoading() {
@@ -378,8 +353,24 @@ class TasksController extends GetxController {
   Iterable<Task> get _filteredTasks {
     return _tasks.where((Task task) {
       return _matchesStatusFilter(task) &&
-          _categoryFilter.value.matches(task.category);
+          _categoryFilter.value.matches(task.category) &&
+          _matchesSearch(task);
     });
+  }
+
+  bool _matchesSearch(Task task) {
+    final String query = searchQuery.trim().toLowerCase();
+    if (query.isEmpty) {
+      return true;
+    }
+
+    if (task.title.toLowerCase().contains(query)) {
+      return true;
+    }
+
+    return task.subtasks.any(
+      (TaskChecklistItem item) => item.title.toLowerCase().contains(query),
+    );
   }
 
   bool _matchesStatusFilter(Task task) {
@@ -476,11 +467,6 @@ class TasksController extends GetxController {
     return task.deadline ??
         task.startTime ??
         DateTime(task.date.year, task.date.month, task.date.day + 1);
-  }
-
-  String _generateId() {
-    return '${DateTime.now().microsecondsSinceEpoch.toRadixString(16)}-'
-        '${Random().nextInt(1 << 32).toRadixString(16)}';
   }
 }
 

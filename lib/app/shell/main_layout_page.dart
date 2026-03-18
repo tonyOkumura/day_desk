@@ -13,11 +13,14 @@ import '../../features/map/presentation/controllers/places_map_controller.dart';
 import '../../features/map/presentation/pages/map_content_page.dart';
 import '../../features/settings/presentation/pages/settings_content_page.dart';
 import '../../features/tasks/presentation/pages/tasks_content_page.dart';
+import '../../features/tasks/presentation/widgets/tasks_page_header.dart';
 import '../controllers/main_layout_controller.dart';
 import '../navigation/app_destination.dart';
 import '../theme/app_navigation_theme.dart';
 import '../theme/app_spacing.dart';
 import 'main_layout_intents.dart';
+import 'shell_page_header_config.dart';
+import 'widgets/app_top_bar.dart';
 
 class MainLayoutPage extends StatefulWidget {
   const MainLayoutPage({required this.initialDestination, super.key});
@@ -90,8 +93,9 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bool useCompactNavigation =
-        MediaQuery.sizeOf(context).width < AppBreakpoints.compactNavigation;
+    final bool useCompactNavigation = AppBreakpoints.usesCompactNavigation(
+      MediaQuery.sizeOf(context).width,
+    );
 
     return Obx(() {
       final AppDestination destination = _controller.currentDestination;
@@ -102,6 +106,7 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
             return;
           }
 
+          _controller.syncViewportToCurrentDestination();
           _controller.requestPageFocus(destination);
         });
       }
@@ -171,17 +176,81 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
                 body: ColoredBox(
                   color: AppNavigationTheme.shellBackgroundColor(context),
                   child: SafeArea(
-                    child: useCompactNavigation
-                        ? _CompactMainLayout(
-                            controller: _controller,
-                            currentDestination: destination,
-                            pages: _pages,
-                          )
-                        : _ExpandedMainLayout(
-                            controller: _controller,
-                            currentDestination: destination,
-                            pages: _pages,
+                    child: Row(
+                      children: <Widget>[
+                        if (!useCompactNavigation)
+                          FocusTraversalOrder(
+                            order: const NumericFocusOrder(1),
+                            child: SidebarX(
+                              controller: _controller.sidebarController,
+                              theme: AppNavigationTheme.sidebar(context),
+                              extendedTheme: AppNavigationTheme.sidebarExtended(
+                                context,
+                              ),
+                              showToggleButton: true,
+                              headerBuilder: (
+                                BuildContext context,
+                                bool extended,
+                              ) {
+                                return _DesktopSidebarHeader(
+                                  extended: extended,
+                                );
+                              },
+                              footerBuilder: (
+                                BuildContext context,
+                                bool extended,
+                              ) {
+                                return _DesktopSidebarFooter(
+                                  extended: extended,
+                                );
+                              },
+                              items: AppDestination.values
+                                  .map(
+                                    (AppDestination destination) => SidebarXItem(
+                                      label: destination.label,
+                                      iconBuilder: (
+                                        bool selected,
+                                        bool hovered,
+                                      ) {
+                                        return Tooltip(
+                                          message: destination.label,
+                                          waitDuration: const Duration(
+                                            milliseconds: 500,
+                                          ),
+                                          child: Icon(
+                                            selected
+                                                ? destination.selectedIcon
+                                                : destination.icon,
+                                          ),
+                                        );
+                                      },
+                                      onTap: () {
+                                        _controller.selectDestination(
+                                          destination,
+                                          animated: false,
+                                          syncRoute: true,
+                                        );
+                                      },
+                                    ),
+                                  )
+                                  .toList(growable: false),
+                            ),
                           ),
+                        Expanded(
+                          child: FocusTraversalOrder(
+                            order: const NumericFocusOrder(2),
+                            child: _MainLayoutBody(
+                              controller: _controller,
+                              currentDestination: destination,
+                              pages: _pages,
+                              swipeEnabled:
+                                  useCompactNavigation &&
+                                  destination != AppDestination.map,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 bottomNavigationBar: useCompactNavigation
@@ -237,102 +306,6 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
   }
 }
 
-class _ExpandedMainLayout extends StatelessWidget {
-  const _ExpandedMainLayout({
-    required this.controller,
-    required this.currentDestination,
-    required this.pages,
-  });
-
-  final MainLayoutController controller;
-  final AppDestination currentDestination;
-  final List<Widget> pages;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        FocusTraversalOrder(
-          order: const NumericFocusOrder(1),
-          child: SidebarX(
-            controller: controller.sidebarController,
-            theme: AppNavigationTheme.sidebar(context),
-            extendedTheme: AppNavigationTheme.sidebarExtended(context),
-            showToggleButton: true,
-            headerBuilder: (BuildContext context, bool extended) {
-              return _DesktopSidebarHeader(extended: extended);
-            },
-            footerBuilder: (BuildContext context, bool extended) {
-              return _DesktopSidebarFooter(extended: extended);
-            },
-            items: AppDestination.values
-                .map(
-                  (AppDestination destination) => SidebarXItem(
-                    label: destination.label,
-                    iconBuilder: (bool selected, bool hovered) {
-                      return Tooltip(
-                        message: destination.label,
-                        waitDuration: const Duration(milliseconds: 500),
-                        child: Icon(
-                          selected
-                              ? destination.selectedIcon
-                              : destination.icon,
-                        ),
-                      );
-                    },
-                    onTap: () {
-                      controller.selectDestination(
-                        destination,
-                        animated: false,
-                        syncRoute: true,
-                      );
-                    },
-                  ),
-                )
-                .toList(growable: false),
-          ),
-        ),
-        Expanded(
-          child: FocusTraversalOrder(
-            order: const NumericFocusOrder(2),
-            child: _MainLayoutBody(
-              controller: controller,
-              currentDestination: currentDestination,
-              pages: pages,
-              swipeEnabled: false,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CompactMainLayout extends StatelessWidget {
-  const _CompactMainLayout({
-    required this.controller,
-    required this.currentDestination,
-    required this.pages,
-  });
-
-  final MainLayoutController controller;
-  final AppDestination currentDestination;
-  final List<Widget> pages;
-
-  @override
-  Widget build(BuildContext context) {
-    return FocusTraversalOrder(
-      order: const NumericFocusOrder(2),
-      child: _MainLayoutBody(
-        controller: controller,
-        currentDestination: currentDestination,
-        pages: pages,
-        swipeEnabled: currentDestination != AppDestination.map,
-      ),
-    );
-  }
-}
-
 class _MainLayoutBody extends StatelessWidget {
   const _MainLayoutBody({
     required this.controller,
@@ -350,25 +323,28 @@ class _MainLayoutBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final ThemeData theme = Theme.of(context);
-        final TextTheme textTheme = theme.textTheme;
-        final double width = constraints.maxWidth;
-        final bool useCompactDensity = width < AppBreakpoints.compactDensity;
-        final TextStyle? titleStyle =
-            (width < AppBreakpoints.compactHeader
-                    ? textTheme.headlineSmall
-                    : textTheme.headlineMedium)
-                ?.copyWith(fontWeight: FontWeight.w800);
+        final AppLayoutTier layoutTier = AppBreakpoints.layoutTierForWidth(
+          constraints.maxWidth,
+        );
+        final ShellPageHeaderConfig headerConfig = _headerConfigFor(
+          currentDestination,
+        );
 
         return FocusTraversalGroup(
           policy: OrderedTraversalPolicy(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              _PageTitleBar(
-                currentDestination: currentDestination,
-                titleStyle: titleStyle,
-                compactDensity: useCompactDensity,
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                child: AppTopBar(
+                  key: ValueKey<String>('page-header-${currentDestination.name}'),
+                  pageKey: Key('page-app-bar-${currentDestination.name}'),
+                  config: headerConfig,
+                  layoutTier: layoutTier,
+                ),
               ),
               Expanded(child: _buildPageViewport()),
             ],
@@ -395,6 +371,16 @@ class _MainLayoutBody extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  ShellPageHeaderConfig _headerConfigFor(AppDestination destination) {
+    return switch (destination) {
+      AppDestination.tasks => ShellPageHeaderConfig(
+          title: destination.title,
+          bottom: const TasksPageHeader(),
+        ),
+      _ => ShellPageHeaderConfig(title: destination.title),
+    };
   }
 }
 
@@ -528,44 +514,6 @@ class _DesktopSidebarHeader extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _PageTitleBar extends StatelessWidget {
-  const _PageTitleBar({
-    required this.currentDestination,
-    required this.titleStyle,
-    required this.compactDensity,
-  });
-
-  final AppDestination currentDestination;
-  final TextStyle? titleStyle;
-  final bool compactDensity;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-
-    return Material(
-      color: theme.colorScheme.surface,
-      child: Container(
-        key: Key('page-app-bar-${currentDestination.name}'),
-        height: compactDensity ? 64 : 72,
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(
-          horizontal: compactDensity ? AppSpacing.lg : AppSpacing.xl,
-        ),
-        alignment: Alignment.centerLeft,
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
-            ),
-          ),
-        ),
-        child: Text(currentDestination.title, style: titleStyle),
       ),
     );
   }

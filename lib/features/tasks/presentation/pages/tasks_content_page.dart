@@ -4,87 +4,45 @@ import 'package:get/get.dart';
 
 import '../../../../app/navigation/app_destination.dart';
 import '../../../../app/shell/page_content_frame.dart';
+import '../../../../app/theme/app_radii.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/app_breakpoints.dart';
 import '../../../../core/date/app_date_formatter.dart';
-import '../../../../core/logging/app_logger.dart';
-import '../../../../core/notifications/app_notification_service.dart';
-import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
-import '../../../../core/widgets/app_dropdown_field.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_error_state.dart';
+import '../../../../core/widgets/app_expandable_section.dart';
 import '../../../../core/widgets/app_loading_state.dart';
-import '../../../../core/widgets/app_section_card.dart';
 import '../../../../core/widgets/app_surface_card.dart';
-import '../../../settings/domain/entities/app_settings.dart';
-import '../../../settings/domain/repositories/app_settings_repository.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/task_checklist_item.dart';
 import '../../domain/entities/task_quadrant.dart';
-import '../../domain/repositories/task_repository.dart';
-import '../controllers/task_editor_controller.dart';
 import '../controllers/tasks_controller.dart';
 import '../models/task_list_options.dart';
+import '../task_editor_launcher.dart';
 import '../widgets/task_card.dart';
-import '../widgets/task_editor_sheet.dart';
+
+enum _TaskMatrixLayoutMode { compact, medium, wide }
 
 class TasksContentPage extends GetView<TasksController> {
   const TasksContentPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final bool compact =
-        MediaQuery.sizeOf(context).width < AppBreakpoints.compactNavigation;
-
     return PageContentFrame(
       storageKey: AppDestination.tasks.pageStorageKey,
-      child: Obx(() {
-        final List<Task> tasks = controller.visibleTasks;
-        final List<TaskQuadrantGroup> groups = controller.matrixGroups;
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final _TaskMatrixLayoutMode matrixLayout = _matrixLayoutForWidth(
+            constraints.maxWidth,
+          );
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            AppSectionCard(
-              title: 'Матрица задач',
-              description:
-                  'Сначала решаем, что действительно важно и срочно. '
-                  'Личный трекер строится вокруг матрицы Эйзенхауэра, а не '
-                  'вокруг абстрактного high priority.',
-              trailing: compact
-                  ? null
-                  : AppButton(
-                      key: const Key('tasks-add-button'),
-                      label: 'Полный редактор',
-                      icon: Icons.edit_note_rounded,
-                      onPressed: () => _openTaskEditor(context),
-                    ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  _TaskQuickCaptureCard(controller: controller),
-                  const SizedBox(height: AppSpacing.xl),
-                  _TaskToolbar(
-                    controller: controller,
-                    onPickDate: () => _pickTasksDate(context),
-                  ),
-                  if (compact) ...<Widget>[
-                    const SizedBox(height: AppSpacing.lg),
-                    AppButton(
-                      key: const Key('tasks-add-button'),
-                      label: 'Полный редактор',
-                      icon: Icons.edit_note_rounded,
-                      isExpanded: true,
-                      onPressed: () => _openTaskEditor(context),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            if (controller.isLoading)
-              const Center(
+          return Obx(() {
+            final List<Task> tasks = controller.visibleTasks;
+            final List<TaskQuadrantGroup> groups = controller.matrixGroups;
+
+            if (controller.isLoading) {
+              return const Center(
                 key: Key('tasks-state-loading'),
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
@@ -94,9 +52,11 @@ class TasksContentPage extends GetView<TasksController> {
                         'Поднимаем локальный список и готовим квадранты на день.',
                   ),
                 ),
-              )
-            else if (controller.hasError)
-              Center(
+              );
+            }
+
+            if (controller.hasError) {
+              return Center(
                 key: const Key('tasks-state-error'),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
@@ -109,9 +69,11 @@ class TasksContentPage extends GetView<TasksController> {
                     onAction: controller.retryLoading,
                   ),
                 ),
-              )
-            else if (tasks.isEmpty)
-              Center(
+              );
+            }
+
+            if (tasks.isEmpty) {
+              return Center(
                 key: const Key('tasks-state-empty'),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
@@ -120,51 +82,57 @@ class TasksContentPage extends GetView<TasksController> {
                         ? 'Под текущий фильтр задач нет'
                         : 'Матрица пока пустая',
                     message: controller.hasSourceTasks
-                        ? 'Смени статус, категорию или режим просмотра, чтобы увидеть другие задачи.'
-                        : 'Захвати первую задачу сверху и сразу отнеси её в правильный квадрант.',
+                        ? 'Сбрось фильтры, смени запрос или открой другой режим просмотра.'
+                        : 'Создай первую задачу через кнопку плюс в верхней панели.',
                     actionLabel: 'Открыть редактор',
                     onAction: () => _openTaskEditor(context),
                   ),
                 ),
-              )
-            else if (controller.viewMode == TaskViewMode.matrix)
-              _TaskMatrixBoard(
-                controller: controller,
-                groups: groups,
-                compact: compact,
-                onOpenEditor: (Task task) =>
-                    _openTaskEditor(context, task: task),
-                onConfirmDelete: (Task task) =>
-                    _confirmDeleteTask(context, task),
-                onReschedule: (Task task) => _pickRescheduleDate(context, task),
-              )
-            else
-              _TaskListBoard(
-                controller: controller,
-                tasks: tasks,
-                onOpenEditor: (Task task) =>
-                    _openTaskEditor(context, task: task),
-                onConfirmDelete: (Task task) =>
-                    _confirmDeleteTask(context, task),
-                onReschedule: (Task task) => _pickRescheduleDate(context, task),
-              ),
-          ],
-        );
-      }),
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                if (controller.viewMode == TaskViewMode.matrix)
+                  _TaskMatrixBoard(
+                    controller: controller,
+                    groups: groups,
+                    layout: matrixLayout,
+                    onOpenEditor: (Task task) =>
+                        _openTaskEditor(context, task: task),
+                    onConfirmDelete: (Task task) =>
+                        _confirmDeleteTask(context, task),
+                    onReschedule: (Task task) =>
+                        _pickRescheduleDate(context, task),
+                  )
+                else
+                  _TaskListBoard(
+                    controller: controller,
+                    tasks: tasks,
+                    onOpenEditor: (Task task) =>
+                        _openTaskEditor(context, task: task),
+                    onConfirmDelete: (Task task) =>
+                        _confirmDeleteTask(context, task),
+                    onReschedule: (Task task) =>
+                        _pickRescheduleDate(context, task),
+                  ),
+              ],
+            );
+          });
+        },
+      ),
     );
   }
 
-  Future<void> _pickTasksDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: controller.selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-      locale: AppDateFormatter.appLocale,
-    );
-    if (picked != null) {
-      await controller.selectDate(picked);
+  _TaskMatrixLayoutMode _matrixLayoutForWidth(double width) {
+    if (width < AppBreakpoints.compactNavigation) {
+      return _TaskMatrixLayoutMode.compact;
     }
+    if (width < AppBreakpoints.pageMaxWidth) {
+      return _TaskMatrixLayoutMode.medium;
+    }
+    return _TaskMatrixLayoutMode.wide;
   }
 
   Future<void> _pickRescheduleDate(BuildContext context, Task task) async {
@@ -195,269 +163,12 @@ class TasksContentPage extends GetView<TasksController> {
   }
 
   Future<void> _openTaskEditor(BuildContext context, {Task? task}) async {
-    final AppSettings settings = await Get.find<AppSettingsRepository>()
-        .readSettings();
-    if (!context.mounted) {
-      return;
-    }
-    final TaskEditorController editor = TaskEditorController(
-      repository: Get.find<TaskRepository>(),
-      dateFormatter: Get.find<AppDateFormatter>(),
-      logger: Get.find<AppLogger>(),
-      notificationService: Get.find<AppNotificationService>(),
-      defaultReminderPreset: settings.defaultReminderPreset,
-      initialTask: task,
+    await openTaskEditorFlow(
+      context,
+      task: task,
       initialDate: controller.scopeMode == TaskScopeMode.forDay
           ? controller.selectedDate
           : DateTime.now(),
-    );
-
-    final bool compact =
-        MediaQuery.sizeOf(context).width < AppBreakpoints.compactNavigation;
-
-    if (compact) {
-      await Navigator.of(context).push<Task>(
-        MaterialPageRoute<Task>(
-          builder: (BuildContext context) => TaskEditorPage(controller: editor),
-          fullscreenDialog: true,
-        ),
-      );
-      return;
-    }
-
-    await showDialog<Task>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return TaskEditorDialog(controller: editor);
-      },
-    );
-  }
-}
-
-class _TaskQuickCaptureCard extends StatefulWidget {
-  const _TaskQuickCaptureCard({required this.controller});
-
-  final TasksController controller;
-
-  @override
-  State<_TaskQuickCaptureCard> createState() => _TaskQuickCaptureCardState();
-}
-
-class _TaskQuickCaptureCardState extends State<_TaskQuickCaptureCard> {
-  late final TextEditingController _textController;
-
-  @override
-  void initState() {
-    super.initState();
-    _textController =
-        TextEditingController(text: widget.controller.quickCaptureTitle)
-          ..addListener(() {
-            widget.controller.updateQuickCaptureTitle(_textController.text);
-          });
-  }
-
-  @override
-  void dispose() {
-    _textController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    await widget.controller.submitQuickCapture();
-    if (!mounted) {
-      return;
-    }
-    if (_textController.text != widget.controller.quickCaptureTitle) {
-      _textController.value = TextEditingValue(
-        text: widget.controller.quickCaptureTitle,
-        selection: TextSelection.collapsed(
-          offset: widget.controller.quickCaptureTitle.length,
-        ),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      if (_textController.text != widget.controller.quickCaptureTitle) {
-        _textController.value = TextEditingValue(
-          text: widget.controller.quickCaptureTitle,
-          selection: TextSelection.collapsed(
-            offset: widget.controller.quickCaptureTitle.length,
-          ),
-        );
-      }
-
-      final bool compact = MediaQuery.sizeOf(context).width < 760;
-      return AppSurfaceCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              'Быстрый захват',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Сформулируй задачу коротко и сразу положи её в правильный квадрант.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            TextField(
-              key: const Key('task-quick-capture-field'),
-              controller: _textController,
-              textCapitalization: TextCapitalization.sentences,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _submit(),
-              decoration: const InputDecoration(
-                hintText: 'Например, пойти в магазин',
-                labelText: 'Новая задача',
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: TaskQuadrant.values
-                  .map((TaskQuadrant quadrant) {
-                    return ChoiceChip(
-                      key: Key('quick-capture-quadrant-${quadrant.name}'),
-                      label: Text(quadrant.label),
-                      selected:
-                          widget.controller.quickCaptureQuadrant == quadrant,
-                      onSelected: (_) => widget.controller
-                          .updateQuickCaptureQuadrant(quadrant),
-                    );
-                  })
-                  .toList(growable: false),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: AppButton(
-                    key: const Key('task-quick-capture-submit'),
-                    label: 'Добавить в матрицу',
-                    icon: Icons.add_rounded,
-                    isExpanded: compact,
-                    onPressed: widget.controller.canSubmitQuickCapture
-                        ? _submit
-                        : null,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    });
-  }
-}
-
-class _TaskToolbar extends StatelessWidget {
-  const _TaskToolbar({required this.controller, required this.onPickDate});
-
-  final TasksController controller;
-  final Future<void> Function() onPickDate;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: AppSpacing.md,
-      runSpacing: AppSpacing.md,
-      children: <Widget>[
-        ...controller.viewModes.map((TaskViewMode mode) {
-          return _ModeChipButton(
-            key: Key('task-view-mode-${mode.name}'),
-            label: mode.label,
-            selected: controller.viewMode == mode,
-            onPressed: () => controller.selectViewMode(mode),
-          );
-        }),
-        ...controller.scopeModes.map((TaskScopeMode mode) {
-          return _ModeChipButton(
-            key: Key('task-scope-mode-${mode.name}'),
-            label: mode.label,
-            selected: controller.scopeMode == mode,
-            onPressed: () => controller.selectScopeMode(mode),
-          );
-        }),
-        if (controller.scopeMode == TaskScopeMode.forDay)
-          AppButton(
-            key: const Key('tasks-date-picker-button'),
-            label: controller.selectedDateLabel,
-            icon: Icons.event_outlined,
-            variant: AppButtonVariant.secondary,
-            onPressed: onPickDate,
-          ),
-        AppDropdownField<TaskStatusFilter>(
-          label: 'Статус',
-          value: controller.statusFilter,
-          fieldKey: const Key('task-status-filter-dropdown'),
-          items: controller.statusFilters
-              .map(
-                (TaskStatusFilter filter) => DropdownMenuItem<TaskStatusFilter>(
-                  key: Key('task-status-filter-option-${filter.name}'),
-                  value: filter,
-                  child: Text(filter.label),
-                ),
-              )
-              .toList(growable: false),
-          onChanged: (TaskStatusFilter? filter) {
-            if (filter != null) {
-              controller.selectStatusFilter(filter);
-            }
-          },
-          width: 220,
-        ),
-        AppDropdownField<TaskCategoryFilter>(
-          label: 'Категория',
-          value: controller.categoryFilter,
-          fieldKey: const Key('task-category-filter-dropdown'),
-          items: controller.categoryFilters
-              .map(
-                (TaskCategoryFilter filter) =>
-                    DropdownMenuItem<TaskCategoryFilter>(
-                      key: Key('task-category-filter-option-${filter.name}'),
-                      value: filter,
-                      child: Text(filter.label),
-                    ),
-              )
-              .toList(growable: false),
-          onChanged: (TaskCategoryFilter? filter) {
-            if (filter != null) {
-              controller.selectCategoryFilter(filter);
-            }
-          },
-          width: 220,
-        ),
-        if (controller.viewMode == TaskViewMode.list)
-          AppDropdownField<TaskListSortOption>(
-            label: 'Сортировка',
-            value: controller.listSortOption,
-            fieldKey: const Key('task-sort-dropdown'),
-            items: controller.listSortOptions
-                .map(
-                  (TaskListSortOption option) =>
-                      DropdownMenuItem<TaskListSortOption>(
-                        key: Key('task-sort-option-${option.name}'),
-                        value: option,
-                        child: Text(option.label),
-                      ),
-                )
-                .toList(growable: false),
-            onChanged: (TaskListSortOption? option) {
-              if (option != null) {
-                controller.selectListSortOption(option);
-              }
-            },
-            width: 240,
-          ),
-      ],
     );
   }
 }
@@ -466,7 +177,7 @@ class _TaskMatrixBoard extends StatelessWidget {
   const _TaskMatrixBoard({
     required this.controller,
     required this.groups,
-    required this.compact,
+    required this.layout,
     required this.onOpenEditor,
     required this.onConfirmDelete,
     required this.onReschedule,
@@ -474,26 +185,32 @@ class _TaskMatrixBoard extends StatelessWidget {
 
   final TasksController controller;
   final List<TaskQuadrantGroup> groups;
-  final bool compact;
+  final _TaskMatrixLayoutMode layout;
   final ValueChanged<Task> onOpenEditor;
   final ValueChanged<Task> onConfirmDelete;
   final ValueChanged<Task> onReschedule;
 
   @override
   Widget build(BuildContext context) {
-    if (compact) {
+    if (layout == _TaskMatrixLayoutMode.compact) {
       return Column(
         key: const Key('tasks-matrix-compact'),
         children: groups
             .map((TaskQuadrantGroup group) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                child: _CompactQuadrantSection(
-                  group: group,
-                  controller: controller,
-                  onOpenEditor: onOpenEditor,
-                  onConfirmDelete: onConfirmDelete,
-                  onReschedule: onReschedule,
+                child: Obx(
+                  () => _CompactQuadrantSection(
+                    group: group,
+                    expanded: controller.isQuadrantExpanded(group.quadrant),
+                    onExpandedChanged: (bool expanded) {
+                      controller.setQuadrantExpanded(group.quadrant, expanded);
+                    },
+                    controller: controller,
+                    onOpenEditor: onOpenEditor,
+                    onConfirmDelete: onConfirmDelete,
+                    onReschedule: onReschedule,
+                  ),
                 ),
               );
             })
@@ -515,7 +232,7 @@ class _TaskMatrixBoard extends StatelessWidget {
     );
 
     return Column(
-      key: const Key('tasks-matrix-wide'),
+      key: Key('tasks-matrix-${layout.name}'),
       children: <Widget>[
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -523,16 +240,22 @@ class _TaskMatrixBoard extends StatelessWidget {
             Expanded(
               child: _WideQuadrantSection(
                 group: doNow,
+                dense: layout == _TaskMatrixLayoutMode.medium,
                 controller: controller,
                 onOpenEditor: onOpenEditor,
                 onConfirmDelete: onConfirmDelete,
                 onReschedule: onReschedule,
               ),
             ),
-            const SizedBox(width: AppSpacing.xl),
+            SizedBox(
+              width: layout == _TaskMatrixLayoutMode.medium
+                  ? AppSpacing.lg
+                  : AppSpacing.xl,
+            ),
             Expanded(
               child: _WideQuadrantSection(
                 group: schedule,
+                dense: layout == _TaskMatrixLayoutMode.medium,
                 controller: controller,
                 onOpenEditor: onOpenEditor,
                 onConfirmDelete: onConfirmDelete,
@@ -541,23 +264,33 @@ class _TaskMatrixBoard extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.xl),
+        SizedBox(
+          height: layout == _TaskMatrixLayoutMode.medium
+              ? AppSpacing.lg
+              : AppSpacing.xl,
+        ),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Expanded(
               child: _WideQuadrantSection(
                 group: quickWins,
+                dense: layout == _TaskMatrixLayoutMode.medium,
                 controller: controller,
                 onOpenEditor: onOpenEditor,
                 onConfirmDelete: onConfirmDelete,
                 onReschedule: onReschedule,
               ),
             ),
-            const SizedBox(width: AppSpacing.xl),
+            SizedBox(
+              width: layout == _TaskMatrixLayoutMode.medium
+                  ? AppSpacing.lg
+                  : AppSpacing.xl,
+            ),
             Expanded(
               child: _WideQuadrantSection(
                 group: later,
+                dense: layout == _TaskMatrixLayoutMode.medium,
                 controller: controller,
                 onOpenEditor: onOpenEditor,
                 onConfirmDelete: onConfirmDelete,
@@ -608,6 +341,7 @@ class _TaskListBoard extends StatelessWidget {
                   child: _TaskCardHost(
                     task: task,
                     controller: controller,
+                    enableDrag: false,
                     onOpenEditor: onOpenEditor,
                     onConfirmDelete: onConfirmDelete,
                     onReschedule: onReschedule,
@@ -624,6 +358,7 @@ class _TaskListBoard extends StatelessWidget {
 class _WideQuadrantSection extends StatelessWidget {
   const _WideQuadrantSection({
     required this.group,
+    required this.dense,
     required this.controller,
     required this.onOpenEditor,
     required this.onConfirmDelete,
@@ -631,6 +366,7 @@ class _WideQuadrantSection extends StatelessWidget {
   });
 
   final TaskQuadrantGroup group;
+  final bool dense;
   final TasksController controller;
   final ValueChanged<Task> onOpenEditor;
   final ValueChanged<Task> onConfirmDelete;
@@ -638,11 +374,88 @@ class _WideQuadrantSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppSurfaceCard(
-      key: Key('task-matrix-group-${group.quadrant.name}'),
-      child: _QuadrantSectionBody(
+    return DragTarget<Task>(
+      onWillAcceptWithDetails: (DragTargetDetails<Task> details) {
+        return details.data.quadrant != group.quadrant;
+      },
+      onAcceptWithDetails: (DragTargetDetails<Task> details) {
+        if (details.data.quadrant == group.quadrant) {
+          return;
+        }
+        controller.reclassifyTask(details.data, group.quadrant);
+      },
+      builder: (
+        BuildContext context,
+        List<Task?> candidateData,
+        List<dynamic> rejectedData,
+      ) {
+        final bool isHighlighted = candidateData.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.all(isHighlighted ? AppSpacing.xs : 0),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.card + AppSpacing.xs),
+            color: isHighlighted
+                ? Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer.withValues(alpha: 0.24)
+                : Colors.transparent,
+            border: Border.all(
+              color: isHighlighted
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.22)
+                  : Colors.transparent,
+            ),
+          ),
+          child: AppSurfaceCard(
+            key: Key('task-matrix-group-${group.quadrant.name}'),
+            child: _QuadrantSectionBody(
+              group: group,
+              dense: dense,
+              controller: controller,
+              enableDrag: true,
+              onOpenEditor: onOpenEditor,
+              onConfirmDelete: onConfirmDelete,
+              onReschedule: onReschedule,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _CompactQuadrantSection extends StatelessWidget {
+  const _CompactQuadrantSection({
+    required this.group,
+    required this.expanded,
+    required this.onExpandedChanged,
+    required this.controller,
+    required this.onOpenEditor,
+    required this.onConfirmDelete,
+    required this.onReschedule,
+  });
+
+  final TaskQuadrantGroup group;
+  final bool expanded;
+  final ValueChanged<bool> onExpandedChanged;
+  final TasksController controller;
+  final ValueChanged<Task> onOpenEditor;
+  final ValueChanged<Task> onConfirmDelete;
+  final ValueChanged<Task> onReschedule;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppExpandableSection(
+      cardKey: Key('task-matrix-group-${group.quadrant.name}'),
+      key: Key('task-matrix-expansion-${group.quadrant.name}'),
+      expanded: expanded,
+      onExpandedChanged: onExpandedChanged,
+      header: _QuadrantHeader(group: group, dense: true),
+      child: _QuadrantTaskList(
         group: group,
         controller: controller,
+        enableDrag: false,
         onOpenEditor: onOpenEditor,
         onConfirmDelete: onConfirmDelete,
         onReschedule: onReschedule,
@@ -651,57 +464,21 @@ class _WideQuadrantSection extends StatelessWidget {
   }
 }
 
-class _CompactQuadrantSection extends StatelessWidget {
-  const _CompactQuadrantSection({
-    required this.group,
-    required this.controller,
-    required this.onOpenEditor,
-    required this.onConfirmDelete,
-    required this.onReschedule,
-  });
-
-  final TaskQuadrantGroup group;
-  final TasksController controller;
-  final ValueChanged<Task> onOpenEditor;
-  final ValueChanged<Task> onConfirmDelete;
-  final ValueChanged<Task> onReschedule;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppSurfaceCard(
-      key: Key('task-matrix-group-${group.quadrant.name}'),
-      child: ExpansionTile(
-        key: Key('task-matrix-expansion-${group.quadrant.name}'),
-        tilePadding: EdgeInsets.zero,
-        childrenPadding: EdgeInsets.zero,
-        initiallyExpanded: true,
-        title: _QuadrantHeader(group: group),
-        children: <Widget>[
-          const SizedBox(height: AppSpacing.md),
-          _QuadrantTaskList(
-            group: group,
-            controller: controller,
-            onOpenEditor: onOpenEditor,
-            onConfirmDelete: onConfirmDelete,
-            onReschedule: onReschedule,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _QuadrantSectionBody extends StatelessWidget {
   const _QuadrantSectionBody({
     required this.group,
+    required this.dense,
     required this.controller,
+    required this.enableDrag,
     required this.onOpenEditor,
     required this.onConfirmDelete,
     required this.onReschedule,
   });
 
   final TaskQuadrantGroup group;
+  final bool dense;
   final TasksController controller;
+  final bool enableDrag;
   final ValueChanged<Task> onOpenEditor;
   final ValueChanged<Task> onConfirmDelete;
   final ValueChanged<Task> onReschedule;
@@ -711,11 +488,12 @@ class _QuadrantSectionBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        _QuadrantHeader(group: group),
-        const SizedBox(height: AppSpacing.lg),
+        _QuadrantHeader(group: group, dense: dense),
+        SizedBox(height: dense ? AppSpacing.md : AppSpacing.lg),
         _QuadrantTaskList(
           group: group,
           controller: controller,
+          enableDrag: enableDrag,
           onOpenEditor: onOpenEditor,
           onConfirmDelete: onConfirmDelete,
           onReschedule: onReschedule,
@@ -726,9 +504,10 @@ class _QuadrantSectionBody extends StatelessWidget {
 }
 
 class _QuadrantHeader extends StatelessWidget {
-  const _QuadrantHeader({required this.group});
+  const _QuadrantHeader({required this.group, this.dense = false});
 
   final TaskQuadrantGroup group;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -741,22 +520,26 @@ class _QuadrantHeader extends StatelessWidget {
             children: <Widget>[
               Text(
                 group.quadrant.label,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+                style:
+                    (dense
+                            ? Theme.of(context).textTheme.titleLarge
+                            : Theme.of(context).textTheme.headlineSmall)
+                        ?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 group.quadrant.subtitle,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: dense
+                    ? Theme.of(context).textTheme.bodySmall
+                    : Theme.of(context).textTheme.bodyMedium,
               ),
             ],
           ),
         ),
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
+          padding: EdgeInsets.symmetric(
+            horizontal: dense ? AppSpacing.sm : AppSpacing.md,
+            vertical: dense ? AppSpacing.xs : AppSpacing.sm,
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
@@ -764,7 +547,10 @@ class _QuadrantHeader extends StatelessWidget {
               context,
             ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
           ),
-          child: Text('${group.tasks.length}'),
+          child: Text(
+            '${group.tasks.length}',
+            style: dense ? Theme.of(context).textTheme.bodySmall : null,
+          ),
         ),
       ],
     );
@@ -775,6 +561,7 @@ class _QuadrantTaskList extends StatelessWidget {
   const _QuadrantTaskList({
     required this.group,
     required this.controller,
+    required this.enableDrag,
     required this.onOpenEditor,
     required this.onConfirmDelete,
     required this.onReschedule,
@@ -782,6 +569,7 @@ class _QuadrantTaskList extends StatelessWidget {
 
   final TaskQuadrantGroup group;
   final TasksController controller;
+  final bool enableDrag;
   final ValueChanged<Task> onOpenEditor;
   final ValueChanged<Task> onConfirmDelete;
   final ValueChanged<Task> onReschedule;
@@ -803,6 +591,7 @@ class _QuadrantTaskList extends StatelessWidget {
               child: _TaskCardHost(
                 task: task,
                 controller: controller,
+                enableDrag: enableDrag,
                 onOpenEditor: onOpenEditor,
                 onConfirmDelete: onConfirmDelete,
                 onReschedule: onReschedule,
@@ -818,6 +607,7 @@ class _TaskCardHost extends StatelessWidget {
   const _TaskCardHost({
     required this.task,
     required this.controller,
+    required this.enableDrag,
     required this.onOpenEditor,
     required this.onConfirmDelete,
     required this.onReschedule,
@@ -825,13 +615,14 @@ class _TaskCardHost extends StatelessWidget {
 
   final Task task;
   final TasksController controller;
+  final bool enableDrag;
   final ValueChanged<Task> onOpenEditor;
   final ValueChanged<Task> onConfirmDelete;
   final ValueChanged<Task> onReschedule;
 
   @override
   Widget build(BuildContext context) {
-    return TaskCard(
+    final Widget card = TaskCard(
       task: task,
       dateFormatter: Get.find<AppDateFormatter>(),
       onToggleCompleted: () => controller.toggleTaskCompletion(task),
@@ -844,28 +635,30 @@ class _TaskCardHost extends StatelessWidget {
       onToggleSubtaskCompleted: (TaskChecklistItem item) =>
           controller.toggleSubtaskCompletion(task, item),
     );
-  }
-}
 
-class _ModeChipButton extends StatelessWidget {
-  const _ModeChipButton({
-    required this.label,
-    required this.selected,
-    required this.onPressed,
-    super.key,
-  });
+    if (!enableDrag || task.isCompleted) {
+      return card;
+    }
 
-  final String label;
-  final bool selected;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return ChoiceChip(
-      key: key,
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => onPressed(),
+    return LongPressDraggable<Task>(
+      data: task,
+      delay: const Duration(milliseconds: 120),
+      feedback: Material(
+        color: Colors.transparent,
+        elevation: 0,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Opacity(opacity: 0.96, child: card),
+        ),
+      ),
+      childWhenDragging: Opacity(
+        opacity: 0.36,
+        child: IgnorePointer(child: card),
+      ),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.grab,
+        child: card,
+      ),
     );
   }
 }

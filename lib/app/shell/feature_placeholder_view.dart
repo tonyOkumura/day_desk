@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/widgets/adaptive_section_grid.dart';
 import '../../core/widgets/app_section_card.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
@@ -22,8 +23,7 @@ class FeaturePlaceholderView extends StatelessWidget {
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return AdaptiveSectionGrid(
       children: <Widget>[
         AppSectionCard(
           title: title,
@@ -54,7 +54,6 @@ class FeaturePlaceholderView extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.xl),
         AppSectionCard(
           title: 'Что уже заложено',
           child: Column(
@@ -83,7 +82,6 @@ class FeaturePlaceholderView extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.xl),
         AppSectionCard(
           title: 'Следующий шаг',
           child: Column(

@@ -7,6 +7,7 @@ import 'package:day_desk/features/map/presentation/controllers/places_map_contro
 import 'package:day_desk/features/settings/domain/entities/app_settings.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_palette.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_preference.dart';
+import 'package:day_desk/features/settings/presentation/controllers/settings_controller.dart';
 import 'package:day_desk/features/tasks/domain/entities/task.dart';
 import 'package:day_desk/features/tasks/domain/entities/task_category.dart';
 import 'package:day_desk/features/tasks/domain/entities/task_quadrant.dart';
@@ -123,8 +124,44 @@ void main() {
     expect(find.byKey(const Key('page-app-bar-tasks')), findsOneWidget);
     expect(find.byKey(const Key('tasks-state-empty')), findsOneWidget);
     expect(find.text('Матрица пока пустая'), findsOneWidget);
-    expect(find.byKey(const Key('task-quick-capture-field')), findsOneWidget);
+    expect(find.byKey(const Key('tasks-add-button')), findsOneWidget);
+    expect(find.byKey(const Key('tasks-filter-button')), findsOneWidget);
+    expect(find.byKey(const Key('tasks-view-mode-matrix')), findsOneWidget);
   });
+
+  testWidgets(
+    'compact matrix с задачами рендерится без ошибок framework и storage crash',
+    (WidgetTester tester) async {
+      final DateTime today = DateTime.now();
+      final AppTestHarness harness = await AppTestHarness.bootstrap(
+        taskRepository: FakeTaskRepository(
+          initialTasks: <Task>[
+            Task(
+              id: 'compact-task',
+              title: 'Проверить compact matrix',
+              date: DateTime(today.year, today.month, today.day),
+              isUrgent: true,
+              isImportant: true,
+              status: TaskStatus.pending,
+              category: TaskCategory.work,
+              createdAt: today,
+              updatedAt: today,
+            ),
+          ],
+        ),
+      );
+      addTearDown(() async => harness.dispose());
+
+      AppTestHarness.setSurfaceSize(tester, size: const Size(390, 844));
+      addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+      await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.tasks);
+
+      expect(find.byKey(const Key('tasks-matrix-compact')), findsOneWidget);
+      expect(find.text('Проверить compact matrix'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'на широком экране карта работает как immersive canvas с overlay panel',
@@ -313,6 +350,111 @@ void main() {
     );
   });
 
+  testWidgets('на wide layout задачу можно перетащить в другой квадрант', (
+    WidgetTester tester,
+  ) async {
+    final DateTime today = DateTime.now();
+    final FakeTaskRepository taskRepository = FakeTaskRepository(
+      initialTasks: <Task>[
+        Task(
+          id: 'drag-task',
+          title: 'Перетащить в срочное',
+          date: DateTime(today.year, today.month, today.day),
+          isUrgent: false,
+          isImportant: true,
+          status: TaskStatus.pending,
+          category: TaskCategory.work,
+          createdAt: today,
+          updatedAt: today,
+        ),
+      ],
+    );
+    final AppTestHarness harness = await AppTestHarness.bootstrap(
+      taskRepository: taskRepository,
+    );
+    addTearDown(() async => harness.dispose());
+
+    AppTestHarness.setSurfaceSize(tester, size: const Size(1440, 960));
+    addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+    await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.tasks);
+
+    final Offset source = tester.getCenter(
+      find.byKey(const Key('task-card-drag-task')),
+    );
+    final Offset target = tester.getCenter(
+      find.byKey(const Key('task-matrix-group-doNow')),
+    );
+
+    final TestGesture gesture = await tester.startGesture(source);
+    await tester.pump(const Duration(milliseconds: 180));
+    await gesture.moveTo(target);
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    final Task updated = (await taskRepository.getAllTasks()).single;
+    expect(updated.quadrant, TaskQuadrant.doNow);
+  });
+
+  testWidgets(
+    'resize между sidebar и bottom nav не сбрасывает tasks viewport на экран Сегодня',
+    (WidgetTester tester) async {
+      final DateTime today = DateTime.now();
+      final AppTestHarness harness = await AppTestHarness.bootstrap(
+        taskRepository: FakeTaskRepository(
+          initialTasks: <Task>[
+            Task(
+              id: 'resize-task',
+              title: 'Остаться на экране задач',
+              date: DateTime(today.year, today.month, today.day),
+              isUrgent: false,
+              isImportant: true,
+              status: TaskStatus.pending,
+              category: TaskCategory.work,
+              createdAt: today,
+              updatedAt: today,
+            ),
+          ],
+        ),
+      );
+      addTearDown(() async => harness.dispose());
+
+      AppTestHarness.setSurfaceSize(tester, size: const Size(1440, 960));
+      addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+      await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.tasks);
+
+      final MainLayoutController controller = Get.find<MainLayoutController>();
+
+      expect(controller.currentDestination, AppDestination.tasks);
+      expect(find.byKey(const Key('tasks-matrix-medium')), findsOneWidget);
+      expect(find.text('Остаться на экране задач'), findsOneWidget);
+
+      AppTestHarness.setSurfaceSize(tester, size: const Size(700, 900));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      expect(find.byType(GNav), findsOneWidget);
+      expect(controller.currentDestination, AppDestination.tasks);
+      expect(find.byKey(const Key('tasks-matrix-compact')), findsOneWidget);
+      expect(find.text('Остаться на экране задач'), findsOneWidget);
+      expect(find.text('Главный экран дня'), findsNothing);
+      expect(tester.takeException(), isNull);
+
+      AppTestHarness.setSurfaceSize(tester, size: const Size(1440, 960));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      expect(find.byType(SidebarX), findsOneWidget);
+      expect(controller.currentDestination, AppDestination.tasks);
+      expect(find.byKey(const Key('tasks-matrix-medium')), findsOneWidget);
+      expect(find.text('Остаться на экране задач'), findsOneWidget);
+      expect(find.text('Главный экран дня'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'выбранные тема, палитра и foundation-настройки сохраняются между перезапусками',
     (WidgetTester tester) async {
@@ -361,6 +503,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(
+        find.byKey(const Key('default-reminder-preset-dropdown')),
+      );
       await tester.tap(
         find.byKey(const Key('default-reminder-preset-dropdown')),
       );
@@ -409,22 +554,22 @@ void main() {
     addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
 
     await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.settings);
+    final SettingsController controller = Get.find<SettingsController>();
 
+    expect(controller.availableStartHourOptions.contains(18), isFalse);
     await tester.ensureVisible(
       find.byKey(const Key('work-day-start-dropdown')),
     );
     await tester.tap(find.byKey(const Key('work-day-start-dropdown')));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('work-day-start-option-18')), findsNothing);
-
     await tester.tap(find.byKey(const Key('work-day-start-option-8')).last);
     await tester.pumpAndSettle();
 
+    expect(controller.workDayStartHour, 8);
+    expect(controller.availableEndHourOptions.contains(8), isFalse);
     await tester.tap(find.byKey(const Key('work-day-end-dropdown')));
     await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('work-day-end-option-8')), findsNothing);
   });
 
   testWidgets('Ctrl+2 переключает на карту', (WidgetTester tester) async {

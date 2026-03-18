@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/config/app_breakpoints.dart';
 import '../../../../core/date/app_date_formatter.dart';
 import '../../../../core/reminders/reminder_lead_time_preset.dart';
 import '../../../../core/widgets/app_surface_card.dart';
@@ -80,26 +81,19 @@ class TaskCard extends StatelessWidget {
                         spacing: AppSpacing.sm,
                         runSpacing: AppSpacing.sm,
                         children: <Widget>[
-                          PopupMenuButton<TaskQuadrant>(
-                            key: Key('task-quadrant-button-${task.id}'),
-                            tooltip: 'Изменить квадрант',
-                            onSelected: onReclassify,
-                            itemBuilder: (BuildContext context) {
-                              return TaskQuadrant.values
-                                  .map(
-                                    (TaskQuadrant value) =>
-                                        PopupMenuItem<TaskQuadrant>(
-                                          value: value,
-                                          child: Text(value.label),
-                                        ),
-                                  )
-                                  .toList(growable: false);
+                          Builder(
+                            builder: (BuildContext chipContext) {
+                              return InkWell(
+                                key: Key('task-quadrant-button-${task.id}'),
+                                borderRadius: BorderRadius.circular(999),
+                                onTap: () => _showQuadrantPicker(chipContext),
+                                child: _TaskMetaChip(
+                                  icon: _quadrantIcon(task.quadrant),
+                                  label: task.quadrant.label,
+                                  tone: _quadrantTone(task.quadrant),
+                                ),
+                              );
                             },
-                            child: _TaskMetaChip(
-                              icon: _quadrantIcon(task.quadrant),
-                              label: task.quadrant.label,
-                              tone: _quadrantTone(task.quadrant),
-                            ),
                           ),
                           _TaskMetaChip(
                             icon: switch (task.status) {
@@ -289,6 +283,88 @@ class TaskCard extends StatelessWidget {
       TaskQuadrant.quickWins => _TaskMetaTone.tertiary,
       TaskQuadrant.later => _TaskMetaTone.neutral,
     };
+  }
+
+  Future<void> _showQuadrantPicker(BuildContext chipContext) async {
+    final bool compact =
+        MediaQuery.sizeOf(chipContext).width < AppBreakpoints.compactNavigation;
+
+    if (compact) {
+      final TaskQuadrant? selected = await showModalBottomSheet<TaskQuadrant>(
+        context: chipContext,
+        useSafeArea: true,
+        showDragHandle: true,
+        builder: (BuildContext context) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                0,
+                AppSpacing.lg,
+                AppSpacing.lg,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Изменить квадрант',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  ...TaskQuadrant.values.map(
+                    (TaskQuadrant value) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(_quadrantIcon(value)),
+                      title: Text(value.label),
+                      subtitle: Text(value.subtitle),
+                      trailing: task.quadrant == value
+                          ? const Icon(Icons.check_rounded)
+                          : null,
+                      onTap: () => Navigator.of(context).pop(value),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+      if (selected != null) {
+        onReclassify(selected);
+      }
+      return;
+    }
+
+    final RenderBox button = chipContext.findRenderObject() as RenderBox;
+    final RenderBox overlay =
+        Overlay.of(chipContext).context.findRenderObject() as RenderBox;
+    final Offset topLeft = button.localToGlobal(Offset.zero, ancestor: overlay);
+    final Offset bottomRight = button.localToGlobal(
+      button.size.bottomRight(Offset.zero),
+      ancestor: overlay,
+    );
+
+    final TaskQuadrant? selected = await showMenu<TaskQuadrant>(
+      context: chipContext,
+      position: RelativeRect.fromRect(
+        Rect.fromPoints(topLeft, bottomRight),
+        Offset.zero & overlay.size,
+      ),
+      items: TaskQuadrant.values
+          .map(
+            (TaskQuadrant value) => PopupMenuItem<TaskQuadrant>(
+              value: value,
+              child: Text(value.label),
+            ),
+          )
+          .toList(growable: false),
+    );
+    if (selected != null) {
+      onReclassify(selected);
+    }
   }
 }
 

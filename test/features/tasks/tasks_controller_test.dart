@@ -51,7 +51,6 @@ void main() {
       );
       final TasksController controller = TasksController(
         repository: repository,
-        settingsRepository: FakeAppSettingsRepository(),
         dateFormatter: AppDateFormatter(),
         logger: AppLogger(),
         notificationService: RecordingTaskNotificationService(),
@@ -94,7 +93,6 @@ void main() {
     );
     final TasksController controller = TasksController(
       repository: repository,
-      settingsRepository: FakeAppSettingsRepository(),
       dateFormatter: AppDateFormatter(),
       logger: AppLogger(),
       notificationService: RecordingTaskNotificationService(),
@@ -147,7 +145,6 @@ void main() {
       );
       final TasksController controller = TasksController(
         repository: repository,
-        settingsRepository: FakeAppSettingsRepository(),
         dateFormatter: AppDateFormatter(),
         logger: AppLogger(),
         notificationService: RecordingTaskNotificationService(),
@@ -182,25 +179,42 @@ void main() {
     },
   );
 
-  test('TasksController умеет quick capture и reclassify', () async {
-    final FakeTaskRepository repository = FakeTaskRepository();
+  test('TasksController ищет по title и подпунктам и умеет reclassify', () async {
+    final FakeTaskRepository repository = FakeTaskRepository(
+      initialTasks: <Task>[
+        _task(
+          id: 'task-1',
+          title: 'Купить продукты',
+          date: DateTime.now(),
+          quadrant: TaskQuadrant.quickWins,
+          subtasks: const <TaskChecklistItem>[
+            TaskChecklistItem(id: 'sub-1', title: 'Молоко', sortOrder: 0),
+          ],
+        ),
+        _task(
+          id: 'task-2',
+          title: 'Подготовить отчёт',
+          date: DateTime.now(),
+          quadrant: TaskQuadrant.schedule,
+        ),
+      ],
+    );
     final TasksController controller = TasksController(
       repository: repository,
-      settingsRepository: FakeAppSettingsRepository(),
       dateFormatter: AppDateFormatter(),
       logger: AppLogger(),
       notificationService: RecordingTaskNotificationService(),
     );
 
-    controller.updateQuickCaptureTitle('Купить продукты');
-    controller.updateQuickCaptureQuadrant(TaskQuadrant.quickWins);
-    await controller.submitQuickCapture();
+    controller.onInit();
+    await Future<void>.delayed(Duration.zero);
 
-    final Task created = (await repository.getAllTasks()).single;
-    expect(created.quadrant, TaskQuadrant.quickWins);
+    controller.updateSearchQuery('молоко');
+    expect(controller.visibleTasks.map((Task task) => task.id), <String>['task-1']);
 
+    final Task created = (await repository.getAllTasks()).first;
     await controller.reclassifyTask(created, TaskQuadrant.doNow);
-    final Task reclassified = (await repository.getAllTasks()).single;
+    final Task reclassified = (await repository.getAllTasks()).first;
     expect(reclassified.quadrant, TaskQuadrant.doNow);
   });
 
@@ -209,7 +223,6 @@ void main() {
     () async {
       final TasksController controller = TasksController(
         repository: FakeTaskRepository(failOnLoad: true),
-        settingsRepository: FakeAppSettingsRepository(),
         dateFormatter: AppDateFormatter(),
         logger: AppLogger(),
         notificationService: RecordingTaskNotificationService(),
@@ -236,7 +249,6 @@ void main() {
     );
     final TasksController controller = TasksController(
       repository: repository,
-      settingsRepository: FakeAppSettingsRepository(),
       dateFormatter: AppDateFormatter(),
       logger: AppLogger(),
       notificationService: RecordingTaskNotificationService(),

@@ -148,6 +148,17 @@ class MainLayoutController extends GetxController {
     attempt(2);
   }
 
+  void syncViewportToCurrentDestination() {
+    if (!_initialized || !pageController.hasClients) {
+      return;
+    }
+
+    final int pageIndex = pageController.page?.round() ?? currentIndex;
+    if (pageIndex != currentIndex) {
+      pageController.jumpToPage(currentIndex);
+    }
+  }
+
   Future<void> _syncRoute(AppDestination destination) async {
     if (_currentRoutePath.value == destination.route) {
       return;

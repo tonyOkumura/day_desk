@@ -8,11 +8,13 @@ class PageContentFrame extends StatefulWidget {
   const PageContentFrame({
     required this.storageKey,
     required this.child,
+    this.maxContentWidth = AppBreakpoints.pageMaxWidth,
     super.key,
   });
 
   final String storageKey;
   final Widget child;
+  final double maxContentWidth;
 
   @override
   State<PageContentFrame> createState() => _PageContentFrameState();
@@ -36,13 +38,14 @@ class _PageContentFrameState extends State<PageContentFrame> {
   @override
   Widget build(BuildContext context) {
     final double width = MediaQuery.sizeOf(context).width;
-    final bool useCompactDensity = width < AppBreakpoints.compactDensity;
-    final double horizontalPadding = useCompactDensity
-        ? AppSpacing.lg
-        : AppSpacing.xl;
-    final double bottomPadding = useCompactDensity
-        ? AppSpacing.lg
-        : AppSpacing.xl;
+    final AppLayoutTier tier = AppBreakpoints.layoutTierForWidth(width);
+    final double horizontalPadding = switch (tier) {
+      AppLayoutTier.compact => AppSpacing.lg,
+      AppLayoutTier.medium => AppSpacing.xl,
+      AppLayoutTier.wide => AppSpacing.xxl,
+    };
+    final double topPadding = tier.isCompact ? AppSpacing.lg : AppSpacing.xl;
+    final double bottomPadding = tier.isCompact ? AppSpacing.lg : AppSpacing.xl;
 
     return Scrollbar(
       controller: _scrollController,
@@ -54,14 +57,14 @@ class _PageContentFrameState extends State<PageContentFrame> {
         primary: false,
         padding: EdgeInsets.fromLTRB(
           horizontalPadding,
-          0,
+          topPadding,
           horizontalPadding,
           bottomPadding,
         ),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: AppBreakpoints.pageMaxWidth,
+            constraints: BoxConstraints(
+              maxWidth: widget.maxContentWidth,
             ),
             child: widget.child,
           ),
