@@ -8,7 +8,7 @@ class AppInfoService {
     return const AppInfoService(
       AppInfo(
         appName: 'Day Desk',
-        packageName: 'com.example.day_desk',
+        packageName: 'ru.tokumura.daydesk',
         version: '1.0.0',
         buildNumber: '1',
       ),

@@ -21,54 +21,39 @@ import '../../features/settings/domain/entities/app_settings.dart';
 import '../../features/settings/domain/repositories/app_settings_repository.dart';
 import '../bindings/app_binding.dart';
 import '../day_desk_app.dart';
+import 'app_launch_branding.dart';
 import 'app_startup_state.dart';
 
 class AppBootstrap {
   AppBootstrap._();
 
   static Future<void> run() async {
-    await runZonedGuarded(
-      () async {
-        WidgetsFlutterBinding.ensureInitialized();
-        Intl.defaultLocale = AppDateFormatter.localeName;
-        await initializeDateFormatting(AppDateFormatter.localeName);
+    Intl.defaultLocale = AppDateFormatter.localeName;
+    await initializeDateFormatting(AppDateFormatter.localeName);
 
-        final AppLogger logger = Get.isRegistered<AppLogger>()
-            ? Get.find<AppLogger>()
-            : Get.put<AppLogger>(AppLogger(), permanent: true);
-        AppErrorHandler.install(logger);
+    final AppLogger logger = Get.isRegistered<AppLogger>()
+        ? Get.find<AppLogger>()
+        : Get.put<AppLogger>(AppLogger(), permanent: true);
+    AppErrorHandler.install(logger);
 
-        try {
-          await initializeDependencies();
-          runApp(const DayDeskApp());
-        } catch (error, stackTrace) {
-          logger.error(
-            'Bootstrap failed before app startup.',
-            tag: 'AppBootstrap',
-            error: error,
-            stackTrace: stackTrace,
-          );
-          runApp(
-            BootstrapFailureApp(
-              message:
-                  'Не удалось запустить Day Desk. Проверьте настройки '
-                  'окружения и повторите запуск.',
-            ),
-          );
-        }
-      },
-      (Object error, StackTrace stackTrace) {
-        final AppLogger logger = Get.isRegistered<AppLogger>()
-            ? Get.find<AppLogger>()
-            : AppLogger();
-        logger.error(
-          'Unhandled zoned exception.',
-          tag: 'AppBootstrap',
-          error: error,
-          stackTrace: stackTrace,
-        );
-      },
-    );
+    try {
+      await initializeDependencies();
+      runApp(const DayDeskApp());
+    } catch (error, stackTrace) {
+      logger.error(
+        'Bootstrap failed before app startup.',
+        tag: 'AppBootstrap',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      runApp(
+        BootstrapFailureApp(
+          message:
+              'Не удалось запустить Day Desk. Проверьте настройки '
+              'окружения и повторите запуск.',
+        ),
+      );
+    }
   }
 
   static Future<void> initializeDependencies({
@@ -126,10 +111,21 @@ class AppBootstrap {
   }
 }
 
-class BootstrapFailureApp extends StatelessWidget {
+class BootstrapFailureApp extends StatefulWidget {
   const BootstrapFailureApp({required this.message, super.key});
 
   final String message;
+
+  @override
+  State<BootstrapFailureApp> createState() => _BootstrapFailureAppState();
+}
+
+class _BootstrapFailureAppState extends State<BootstrapFailureApp> {
+  @override
+  void initState() {
+    super.initState();
+    AppLaunchBranding.scheduleCloseAfterFirstFrame();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -142,7 +138,7 @@ class BootstrapFailureApp extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Text(
-                message,
+                widget.message,
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),

@@ -89,11 +89,11 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
+            VALUE "CompanyName", "Tokumura" "\0"
             VALUE "FileDescription", "Day Desk" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "day_desk" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 Day Desk. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Tokumura. All rights reserved." "\0"
             VALUE "OriginalFilename", "day_desk.exe" "\0"
             VALUE "ProductName", "Day Desk" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"

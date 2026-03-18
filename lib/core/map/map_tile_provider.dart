@@ -34,7 +34,7 @@ abstract interface class MapTileProvider {
 
 class OpenStreetMapTileProvider implements MapTileProvider {
   const OpenStreetMapTileProvider({
-    this.userAgentPackageName = 'com.example.day_desk',
+    this.userAgentPackageName = 'ru.tokumura.daydesk',
   });
 
   final String userAgentPackageName;

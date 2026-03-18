@@ -4,15 +4,27 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get/get.dart';
 
 import '../core/date/app_date_formatter.dart';
+import 'bootstrap/app_launch_branding.dart';
 import 'controllers/theme_controller.dart';
 import 'routes/app_pages.dart';
 import 'theme/app_theme.dart';
 import 'theme/day_desk_scroll_behavior.dart';
 
-class DayDeskApp extends StatelessWidget {
+class DayDeskApp extends StatefulWidget {
   const DayDeskApp({this.initialRoute, super.key});
 
   final String? initialRoute;
+
+  @override
+  State<DayDeskApp> createState() => _DayDeskAppState();
+}
+
+class _DayDeskAppState extends State<DayDeskApp> {
+  @override
+  void initState() {
+    super.initState();
+    AppLaunchBranding.scheduleCloseAfterFirstFrame();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +45,7 @@ class DayDeskApp extends StatelessWidget {
         themeMode: themeController.themeMode,
         theme: AppTheme.light(palette: themeController.palette),
         darkTheme: AppTheme.dark(palette: themeController.palette),
-        initialRoute: initialRoute ?? AppPages.initial,
+        initialRoute: widget.initialRoute ?? AppPages.initial,
         getPages: AppPages.routes,
       ),
     );

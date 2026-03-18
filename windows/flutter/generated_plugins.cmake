@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   isar_flutter_libs
+  native_splash_screen_windows
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

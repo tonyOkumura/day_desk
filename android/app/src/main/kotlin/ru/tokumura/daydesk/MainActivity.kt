@@ -1,4 +1,4 @@
-package com.example.day_desk
+package ru.tokumura.daydesk
 
 import io.flutter.embedding.android.FlutterActivity
 

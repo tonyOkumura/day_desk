@@ -1,3 +1,3 @@
-Sprint 0 branding placeholder.
+Sprint 0 branding assets for Day Desk.
 
-Put final app icon sources and brand assets for Day Desk in this directory.
+Keep the master icon and splash sources in this directory.

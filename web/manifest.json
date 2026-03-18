@@ -1,11 +1,11 @@
 {
-    "name": "day_desk",
-    "short_name": "day_desk",
+    "name": "Day Desk",
+    "short_name": "Day Desk",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F9F9FF",
+    "theme_color": "#3F5F90",
+    "description": "Day Desk is a personal assistant planner for journalists.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

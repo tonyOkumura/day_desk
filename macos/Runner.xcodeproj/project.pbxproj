@@ -21,6 +21,10 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		A1B2C3D40123456789ABC001 /* NativeSplashScreen_Profile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40123456789ABC011 /* NativeSplashScreen_Profile.swift */; };
+		A1B2C3D40123456789ABC002 /* NativeSplashScreen_Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40123456789ABC012 /* NativeSplashScreen_Debug.swift */; };
+		A1B2C3D40123456789ABC003 /* NativeSplashScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40123456789ABC013 /* NativeSplashScreen.swift */; };
+		A1B2C3D40123456789ABC004 /* NativeSplashScreen_Release.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40123456789ABC014 /* NativeSplashScreen_Release.swift */; };
 		331C80D8294CF71000263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C80D7294CF71000263BE5 /* RunnerTests.swift */; };
 		335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */ = {isa = PBXBuildFile; fileRef = 335BBD1A22A9A15E00E9071D /* GeneratedPluginRegistrant.swift */; };
 		33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC10F02044A3C60003C045 /* AppDelegate.swift */; };
@@ -60,6 +64,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A1B2C3D40123456789ABC011 /* NativeSplashScreen_Profile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NativeSplashScreen_Profile.swift; path = Runner/NativeSplashScreen_Profile.swift; sourceTree = "<group>"; };
+		A1B2C3D40123456789ABC012 /* NativeSplashScreen_Debug.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NativeSplashScreen_Debug.swift; path = Runner/NativeSplashScreen_Debug.swift; sourceTree = "<group>"; };
+		A1B2C3D40123456789ABC013 /* NativeSplashScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NativeSplashScreen.swift; path = Runner/NativeSplashScreen.swift; sourceTree = "<group>"; };
+		A1B2C3D40123456789ABC014 /* NativeSplashScreen_Release.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NativeSplashScreen_Release.swift; path = Runner/NativeSplashScreen_Release.swift; sourceTree = "<group>"; };
 		331C80D5294CF71000263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		331C80D7294CF71000263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		333000ED22D3DE5D00554162 /* Warnings.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Warnings.xcconfig; sourceTree = "<group>"; };
@@ -164,6 +172,10 @@
 			children = (
 				33CC10F02044A3C60003C045 /* AppDelegate.swift */,
 				33CC11122044BFA00003C045 /* MainFlutterWindow.swift */,
+				A1B2C3D40123456789ABC012 /* NativeSplashScreen_Debug.swift */,
+				A1B2C3D40123456789ABC011 /* NativeSplashScreen_Profile.swift */,
+				A1B2C3D40123456789ABC014 /* NativeSplashScreen_Release.swift */,
+				A1B2C3D40123456789ABC013 /* NativeSplashScreen.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
 				33CC11242044D66E0003C045 /* Resources */,
@@ -229,7 +241,7 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastSwiftUpdateCheck = 0920;
 				LastUpgradeCheck = 1510;
-				ORGANIZATIONNAME = "";
+				ORGANIZATIONNAME = Tokumura;
 				TargetAttributes = {
 					331C80D4294CF70F00263BE5 = {
 						CreatedOnToolsVersion = 14.0;
@@ -344,6 +356,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1B2C3D40123456789ABC001 /* NativeSplashScreen_Profile.swift in Sources */,
+				A1B2C3D40123456789ABC002 /* NativeSplashScreen_Debug.swift in Sources */,
+				A1B2C3D40123456789ABC003 /* NativeSplashScreen.swift in Sources */,
+				A1B2C3D40123456789ABC004 /* NativeSplashScreen_Release.swift in Sources */,
 				33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */,
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
@@ -385,7 +401,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.dayDesk.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = ru.tokumura.daydesk.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/day_desk.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/day_desk";
@@ -399,7 +415,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.dayDesk.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = ru.tokumura.daydesk.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/day_desk.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/day_desk";
@@ -413,7 +429,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.dayDesk.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = ru.tokumura.daydesk.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/day_desk.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/day_desk";
@@ -484,6 +500,7 @@
 					"@executable_path/../Frameworks",
 				);
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = PROFILE;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Profile;
