@@ -5,9 +5,11 @@ import '../datasources/task_local_data_source.dart';
 import '../models/task_local_model.dart';
 
 class TaskRepositoryImpl implements TaskRepository {
-  TaskRepositoryImpl(this._localDataSource);
+  TaskRepositoryImpl(this._localDataSource, {DateTime Function()? nowProvider})
+    : _nowProvider = nowProvider ?? DateTime.now;
 
   final TaskLocalDataSource _localDataSource;
+  final DateTime Function() _nowProvider;
 
   @override
   Future<void> createTask(Task task) async {
@@ -18,7 +20,9 @@ class TaskRepositoryImpl implements TaskRepository {
       throw StateError('Task with id "${task.id}" already exists.');
     }
 
-    await _localDataSource.createTask(TaskLocalModel.fromEntity(task));
+    await _localDataSource.createTask(
+      TaskLocalModel.fromEntity(task.normalizedForPersistence()),
+    );
   }
 
   @override
@@ -31,7 +35,10 @@ class TaskRepositoryImpl implements TaskRepository {
     }
 
     await _localDataSource.updateTask(
-      TaskLocalModel.fromEntity(task, isarId: existing.isarId),
+      TaskLocalModel.fromEntity(
+        task.normalizedForPersistence(),
+        isarId: existing.isarId,
+      ),
     );
   }
 
@@ -49,7 +56,9 @@ class TaskRepositoryImpl implements TaskRepository {
   @override
   Future<List<Task>> getAllTasks() async {
     final List<TaskLocalModel> tasks = await _localDataSource.readAllTasks();
-    return tasks.map((TaskLocalModel task) => task.toEntity()).toList();
+    return tasks
+        .map((TaskLocalModel task) => _materializeTask(task.toEntity()))
+        .toList();
   }
 
   @override
@@ -62,7 +71,9 @@ class TaskRepositoryImpl implements TaskRepository {
   @override
   Stream<List<Task>> watchAllTasks() {
     return _localDataSource.watchAllTasks().map((List<TaskLocalModel> tasks) {
-      return tasks.map((TaskLocalModel task) => task.toEntity()).toList();
+      return tasks
+          .map((TaskLocalModel task) => _materializeTask(task.toEntity()))
+          .toList();
     });
   }
 
@@ -71,12 +82,27 @@ class TaskRepositoryImpl implements TaskRepository {
     String taskId, {
     required bool completed,
   }) async {
-    final Task existing = await _requireTask(taskId);
+    final Task existing = await _requireStoredTask(taskId);
 
     await updateTask(
       existing.copyWith(
         status: completed ? TaskStatus.completed : TaskStatus.pending,
-        updatedAt: DateTime.now(),
+        updatedAt: _nowProvider(),
+      ),
+    );
+  }
+
+  @override
+  Future<void> setTaskPostponed(
+    String taskId, {
+    required bool postponed,
+  }) async {
+    final Task existing = await _requireStoredTask(taskId);
+
+    await updateTask(
+      existing.copyWith(
+        status: postponed ? TaskStatus.postponed : TaskStatus.pending,
+        updatedAt: _nowProvider(),
       ),
     );
   }
@@ -87,8 +113,12 @@ class TaskRepositoryImpl implements TaskRepository {
     required DateTime date,
     DateTime? startTime,
   }) async {
-    final Task existing = await _requireTask(taskId);
+    final Task existing = await _requireStoredTask(taskId);
     final DateTime normalizedDate = _startOfDay(date);
+    final DateTime? nextDeadline = _resolveRescheduledDateTime(
+      currentDateTime: existing.deadline,
+      nextDate: normalizedDate,
+    );
 
     final DateTime? nextStartTime = existing.isAllDay
         ? null
@@ -102,13 +132,14 @@ class TaskRepositoryImpl implements TaskRepository {
       existing.copyWith(
         date: normalizedDate,
         startTime: nextStartTime,
+        deadline: nextDeadline,
         durationMinutes: existing.isAllDay ? null : existing.durationMinutes,
-        updatedAt: DateTime.now(),
+        updatedAt: _nowProvider(),
       ),
     );
   }
 
-  Future<Task> _requireTask(String taskId) async {
+  Future<Task> _requireStoredTask(String taskId) async {
     final TaskLocalModel? task = await _localDataSource.readTaskByTaskId(
       taskId,
     );
@@ -117,6 +148,12 @@ class TaskRepositoryImpl implements TaskRepository {
     }
 
     return task.toEntity();
+  }
+
+  Task _materializeTask(Task task) {
+    return task.withResolvedReminderSchedule().withEffectiveStatus(
+      reference: _nowProvider(),
+    );
   }
 
   List<Task> _filterTasksByDay(List<Task> tasks, DateTime date) {
@@ -151,6 +188,29 @@ class TaskRepositoryImpl implements TaskRepository {
       nextDate.day,
       source.hour,
       source.minute,
+      source.second,
+      source.millisecond,
+      source.microsecond,
+    );
+  }
+
+  DateTime? _resolveRescheduledDateTime({
+    required DateTime? currentDateTime,
+    required DateTime nextDate,
+  }) {
+    if (currentDateTime == null) {
+      return null;
+    }
+
+    return DateTime(
+      nextDate.year,
+      nextDate.month,
+      nextDate.day,
+      currentDateTime.hour,
+      currentDateTime.minute,
+      currentDateTime.second,
+      currentDateTime.millisecond,
+      currentDateTime.microsecond,
     );
   }
 }

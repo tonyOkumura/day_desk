@@ -57,6 +57,12 @@ class TasksController extends GetxController {
       TaskStatusFilter.pending => _tasks.where(
         (Task task) => task.status == TaskStatus.pending,
       ),
+      TaskStatusFilter.postponed => _tasks.where(
+        (Task task) => task.status == TaskStatus.postponed,
+      ),
+      TaskStatusFilter.overdue => _tasks.where(
+        (Task task) => task.status == TaskStatus.overdue,
+      ),
       TaskStatusFilter.completed => _tasks.where(
         (Task task) => task.status == TaskStatus.completed,
       ),
@@ -141,6 +147,31 @@ class TasksController extends GetxController {
       _notificationService.showError(
         title: 'Не удалось удалить задачу',
         message: 'Задача осталась в списке. Попробуй ещё раз.',
+      );
+    }
+  }
+
+  Future<void> toggleTaskPostponed(Task task) async {
+    if (task.status == TaskStatus.completed) {
+      return;
+    }
+
+    try {
+      await _repository.setTaskPostponed(
+        task.id,
+        postponed: task.status != TaskStatus.postponed,
+      );
+    } catch (error, stackTrace) {
+      _logger.error(
+        'Failed to toggle task postponed state.',
+        tag: 'TasksController',
+        context: <String, Object?>{'taskId': task.id},
+        error: error,
+        stackTrace: stackTrace,
+      );
+      _notificationService.showError(
+        title: 'Не удалось изменить статус задачи',
+        message: 'Попробуй ещё раз.',
       );
     }
   }
@@ -234,7 +265,7 @@ class TasksController extends GetxController {
   }
 
   int _taskComparator(Task a, Task b) {
-    final int byStatus = a.status.index.compareTo(b.status.index);
+    final int byStatus = a.status.sortOrder.compareTo(b.status.sortOrder);
     if (byStatus != 0) {
       return byStatus;
     }

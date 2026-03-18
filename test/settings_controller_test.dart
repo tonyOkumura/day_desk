@@ -2,6 +2,7 @@ import 'package:day_desk/app/controllers/theme_controller.dart';
 import 'package:day_desk/core/logging/app_logger.dart';
 import 'package:day_desk/core/notifications/app_notification_service.dart';
 import 'package:day_desk/core/notifications/notification_config.dart';
+import 'package:day_desk/core/reminders/reminder_lead_time_preset.dart';
 import 'package:day_desk/features/settings/domain/entities/app_settings.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_palette.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_preference.dart';
@@ -42,11 +43,13 @@ void main() {
       await controller.setWorkDayStartHour(8);
       await controller.setWorkDayEndHour(19);
       await controller.setMinimumFreeSlotMinutes(45);
+      await controller.setDefaultReminderPreset(ReminderLeadTimePreset.hour1);
       await controller.setNotificationsEnabled(false);
 
       expect(controller.workDayStartHour, 8);
       expect(controller.workDayEndHour, 19);
       expect(controller.minimumFreeSlotMinutes, 45);
+      expect(controller.defaultReminderPreset, ReminderLeadTimePreset.hour1);
       expect(controller.notificationsEnabled, isFalse);
       expect(notifications.successEvents, isEmpty);
       expect(notifications.errorEvents, isEmpty);
@@ -112,6 +115,7 @@ void main() {
           workDayStartHour: 8,
           workDayEndHour: 19,
           minimumFreeSlotMinutes: 45,
+          defaultReminderPreset: ReminderLeadTimePreset.day1,
           notificationsEnabled: false,
         ),
       );
@@ -133,6 +137,7 @@ void main() {
           workDayStartHour: 8,
           workDayEndHour: 19,
           minimumFreeSlotMinutes: 45,
+          defaultReminderPreset: ReminderLeadTimePreset.day1,
           notificationsEnabled: false,
         ),
       );
@@ -146,6 +151,10 @@ void main() {
       expect(
         controller.minimumFreeSlotMinutes,
         AppSettings.defaultMinimumFreeSlotMinutes,
+      );
+      expect(
+        controller.defaultReminderPreset,
+        AppSettings.defaultReminderLeadTimePreset,
       );
       expect(
         controller.notificationsEnabled,
@@ -166,6 +175,7 @@ void main() {
           workDayStartHour: 8,
           workDayEndHour: 19,
           minimumFreeSlotMinutes: 45,
+          defaultReminderPreset: ReminderLeadTimePreset.day1,
           notificationsEnabled: false,
         ),
         failOnReset: true,
@@ -188,6 +198,7 @@ void main() {
           workDayStartHour: 8,
           workDayEndHour: 19,
           minimumFreeSlotMinutes: 45,
+          defaultReminderPreset: ReminderLeadTimePreset.day1,
           notificationsEnabled: false,
         ),
       );
@@ -199,6 +210,7 @@ void main() {
       expect(controller.workDayStartHour, 8);
       expect(controller.workDayEndHour, 19);
       expect(controller.minimumFreeSlotMinutes, 45);
+      expect(controller.defaultReminderPreset, ReminderLeadTimePreset.day1);
       expect(controller.notificationsEnabled, isFalse);
       expect(notifications.errorEvents, hasLength(1));
       expect(logger.errorEvents, hasLength(1));
@@ -326,6 +338,11 @@ class FakeSettingsRepository implements AppSettingsRepository {
   @override
   Future<void> saveMinimumFreeSlotMinutes(int minutes) async {
     _settings = _settings.copyWith(minimumFreeSlotMinutes: minutes);
+  }
+
+  @override
+  Future<void> saveDefaultReminderPreset(ReminderLeadTimePreset preset) async {
+    _settings = _settings.copyWith(defaultReminderPreset: preset);
   }
 
   @override

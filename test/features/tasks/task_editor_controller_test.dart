@@ -2,9 +2,11 @@ import 'package:day_desk/core/date/app_date_formatter.dart';
 import 'package:day_desk/core/logging/app_logger.dart';
 import 'package:day_desk/core/notifications/app_notification_service.dart';
 import 'package:day_desk/core/notifications/notification_config.dart';
+import 'package:day_desk/core/reminders/reminder_lead_time_preset.dart';
 import 'package:day_desk/features/tasks/domain/entities/task.dart';
 import 'package:day_desk/features/tasks/domain/entities/task_category.dart';
 import 'package:day_desk/features/tasks/domain/entities/task_priority.dart';
+import 'package:day_desk/features/tasks/domain/entities/task_status.dart';
 import 'package:day_desk/features/tasks/presentation/controllers/task_editor_controller.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -50,6 +52,31 @@ void main() {
   });
 
   test(
+    'TaskEditorController стартует с default reminder preset и разрешает его после дедлайна',
+    () {
+      final TaskEditorController controller = TaskEditorController(
+        repository: FakeTaskRepository(),
+        dateFormatter: AppDateFormatter(),
+        logger: AppLogger(),
+        notificationService: RecordingTaskNotificationService(),
+        defaultReminderPreset: ReminderLeadTimePreset.hour1,
+      );
+
+      expect(controller.reminderPreset, ReminderLeadTimePreset.hour1);
+      expect(controller.resolvedReminderAt, isNull);
+      expect(
+        controller.reminderHelperText,
+        'Напоминание активируется, когда появится дедлайн или точное время.',
+      );
+
+      controller.updateDeadline(DateTime(2026, 3, 18, 18));
+
+      expect(controller.resolvedReminderAt, DateTime(2026, 3, 18, 17));
+      expect(controller.reminderHelperText, 'Сработает 18 марта 2026, 17:00');
+    },
+  );
+
+  test(
     'TaskEditorController сохраняет create и update через один flow',
     () async {
       final FakeTaskRepository repository = FakeTaskRepository();
@@ -64,11 +91,18 @@ void main() {
       createController.updateDescription('Собрать материалы и сделать драфт');
       createController.updatePriority(TaskPriority.high);
       createController.updateCategory(TaskCategory.publication);
+      createController.updateDeadline(DateTime(2026, 3, 18, 18));
+      createController.updateReminderPreset(ReminderLeadTimePreset.hour1);
+      createController.updateStatus(TaskStatus.postponed);
 
       final Task? created = await createController.save();
 
       expect(created, isNotNull);
       expect((await repository.getAllTasks()), hasLength(1));
+      expect(created!.deadline, DateTime(2026, 3, 18, 18));
+      expect(created.reminderPreset, ReminderLeadTimePreset.hour1);
+      expect(created.reminderAt, DateTime(2026, 3, 18, 17));
+      expect(created.status, TaskStatus.postponed);
 
       final TaskEditorController updateController = TaskEditorController(
         repository: repository,
@@ -86,6 +120,42 @@ void main() {
         (await repository.getAllTasks()).single.title,
         'Написать заметку и отправить редактору',
       );
+    },
+  );
+
+  test('TaskEditorController не даёт вручную выбрать overdue', () {
+    final TaskEditorController controller = TaskEditorController(
+      repository: FakeTaskRepository(),
+      dateFormatter: AppDateFormatter(),
+      logger: AppLogger(),
+      notificationService: RecordingTaskNotificationService(),
+    );
+
+    controller.updateStatus(TaskStatus.overdue);
+
+    expect(controller.status, TaskStatus.pending);
+  });
+
+  test(
+    'TaskEditorController сохраняет preset без anchor с null reminderAt',
+    () async {
+      final FakeTaskRepository repository = FakeTaskRepository();
+      final TaskEditorController controller = TaskEditorController(
+        repository: repository,
+        dateFormatter: AppDateFormatter(),
+        logger: AppLogger(),
+        notificationService: RecordingTaskNotificationService(),
+        defaultReminderPreset: ReminderLeadTimePreset.minutes15,
+      );
+
+      controller.updateTitle('Разобрать заметки');
+      controller.setAllDay(false);
+
+      final Task? created = await controller.save();
+
+      expect(created, isNotNull);
+      expect(created!.reminderPreset, ReminderLeadTimePreset.minutes15);
+      expect(created.reminderAt, isNull);
     },
   );
 }

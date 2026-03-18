@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../../../app/controllers/theme_controller.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../core/notifications/app_notification_service.dart';
+import '../../../../core/reminders/reminder_lead_time_preset.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../domain/entities/app_theme_palette.dart';
 import '../../domain/entities/app_theme_preference.dart';
@@ -55,6 +56,8 @@ class SettingsController extends GetxController {
     90,
     120,
   ];
+  static const List<ReminderLeadTimePreset> reminderPresetOptions =
+      ReminderLeadTimePreset.values;
 
   final ThemeController _themeController;
   final AppLogger _logger;
@@ -71,6 +74,8 @@ class SettingsController extends GetxController {
   int get workDayStartHour => _settings.value.workDayStartHour;
   int get workDayEndHour => _settings.value.workDayEndHour;
   int get minimumFreeSlotMinutes => _settings.value.minimumFreeSlotMinutes;
+  ReminderLeadTimePreset get defaultReminderPreset =>
+      _settings.value.defaultReminderPreset;
   bool get notificationsEnabled => _settings.value.notificationsEnabled;
   List<int> get availableStartHourOptions {
     return workHourOptions
@@ -216,6 +221,43 @@ class SettingsController extends GetxController {
       );
       _notificationService.showError(
         title: 'Не удалось обновить длительность окна',
+        message: 'Изменение не сохранилось. Попробуй ещё раз.',
+      );
+    }
+  }
+
+  Future<void> setDefaultReminderPreset(ReminderLeadTimePreset preset) async {
+    if (preset == defaultReminderPreset) {
+      return;
+    }
+
+    final AppSettings previousSettings = _settings.value;
+    final AppSettings nextSettings = previousSettings.copyWith(
+      defaultReminderPreset: preset,
+    );
+    _settings.value = nextSettings;
+
+    try {
+      await _repository.saveDefaultReminderPreset(preset);
+      _logger.info(
+        'Default reminder preset updated.',
+        tag: 'SettingsController',
+        context: <String, String>{'preset': preset.name},
+      );
+    } catch (error, stackTrace) {
+      _settings.value = previousSettings;
+      _logger.error(
+        'Failed to persist default reminder preset.',
+        tag: 'SettingsController',
+        context: <String, String>{
+          'attemptedPreset': preset.name,
+          'rollbackPreset': previousSettings.defaultReminderPreset.name,
+        },
+        error: error,
+        stackTrace: stackTrace,
+      );
+      _notificationService.showError(
+        title: 'Не удалось обновить напоминание по умолчанию',
         message: 'Изменение не сохранилось. Попробуй ещё раз.',
       );
     }

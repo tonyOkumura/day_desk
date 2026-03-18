@@ -16,6 +16,8 @@ import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_error_state.dart';
 import '../../../../core/widgets/app_loading_state.dart';
 import '../../../../core/widgets/app_section_card.dart';
+import '../../../settings/domain/entities/app_settings.dart';
+import '../../../settings/domain/repositories/app_settings_repository.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/repositories/task_repository.dart';
 import '../controllers/task_editor_controller.dart';
@@ -209,6 +211,8 @@ class TasksContentPage extends GetView<TasksController> {
                           dateFormatter: Get.find<AppDateFormatter>(),
                           onToggleCompleted: () =>
                               controller.toggleTaskCompletion(task),
+                          onTogglePostponed: () =>
+                              controller.toggleTaskPostponed(task),
                           onEdit: () => _openTaskEditor(context, task: task),
                           onDelete: () => _confirmDeleteTask(context, task),
                           onReschedule: () =>
@@ -274,11 +278,17 @@ class TasksContentPage extends GetView<TasksController> {
   }
 
   Future<void> _openTaskEditor(BuildContext context, {Task? task}) async {
+    final AppSettings settings = await Get.find<AppSettingsRepository>()
+        .readSettings();
+    if (!context.mounted) {
+      return;
+    }
     final TaskEditorController editor = TaskEditorController(
       repository: Get.find<TaskRepository>(),
       dateFormatter: Get.find<AppDateFormatter>(),
       logger: Get.find<AppLogger>(),
       notificationService: Get.find<AppNotificationService>(),
+      defaultReminderPreset: settings.defaultReminderPreset,
       initialTask: task,
       initialDate: controller.listMode == TaskListMode.forDay
           ? controller.selectedDate

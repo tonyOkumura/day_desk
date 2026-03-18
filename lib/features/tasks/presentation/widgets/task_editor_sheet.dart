@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/date/app_date_formatter.dart';
+import '../../../../core/reminders/reminder_lead_time_preset.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../core/widgets/app_dropdown_field.dart';
@@ -13,6 +14,7 @@ import '../../../../core/widgets/app_surface_card.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/task_category.dart';
 import '../../domain/entities/task_priority.dart';
+import '../../domain/entities/task_status.dart';
 import '../controllers/task_editor_controller.dart';
 
 class TaskEditorDialog extends StatefulWidget {
@@ -288,6 +290,55 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
     );
   }
 
+  Future<DateTime?> _pickDateTime({
+    required DateTime initialDate,
+    required TimeOfDay initialTime,
+  }) async {
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      locale: AppDateFormatter.appLocale,
+    );
+    if (pickedDate == null) {
+      return null;
+    }
+    if (!mounted) {
+      return null;
+    }
+
+    final TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+    );
+    if (pickedTime == null) {
+      return null;
+    }
+
+    return DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+  }
+
+  Future<void> _selectDeadline() async {
+    final DateTime selectedDate = widget.controller.date;
+    final DateTime? currentDeadline = widget.controller.deadline;
+    final DateTime? picked = await _pickDateTime(
+      initialDate: currentDeadline ?? selectedDate,
+      initialTime: currentDeadline != null
+          ? TimeOfDay.fromDateTime(currentDeadline)
+          : const TimeOfDay(hour: 18, minute: 0),
+    );
+    if (picked != null) {
+      widget.controller.updateDeadline(picked);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Obx(
@@ -408,6 +459,65 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
                       ),
                     ),
                 ],
+                const SizedBox(height: AppSpacing.lg),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: AppButton(
+                        key: const Key('task-editor-deadline-button'),
+                        label: widget.controller.deadlineLabel,
+                        icon: Icons.flag_outlined,
+                        variant: AppButtonVariant.secondary,
+                        isExpanded: true,
+                        onPressed: _selectDeadline,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    IconButton(
+                      key: const Key('task-editor-clear-deadline-button'),
+                      tooltip: 'Очистить дедлайн',
+                      onPressed: widget.controller.deadline == null
+                          ? null
+                          : () => widget.controller.updateDeadline(null),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                AppDropdownField<ReminderLeadTimePreset>(
+                  label: 'Напоминание',
+                  value: widget.controller.reminderPreset,
+                  fieldKey: const Key('task-editor-reminder-preset-dropdown'),
+                  items: widget.controller.reminderPresetOptions
+                      .map(
+                        (
+                          ReminderLeadTimePreset preset,
+                        ) => DropdownMenuItem<ReminderLeadTimePreset>(
+                          key: Key(
+                            'task-editor-reminder-preset-option-${preset.name}',
+                          ),
+                          value: preset,
+                          child: Text(preset.label),
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: (ReminderLeadTimePreset? preset) {
+                    if (preset != null) {
+                      widget.controller.updateReminderPreset(preset);
+                    }
+                  },
+                  width: double.infinity,
+                ),
+                if (widget.controller.reminderHelperText != null) ...<Widget>[
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    widget.controller.reminderHelperText!,
+                    key: const Key('task-editor-reminder-helper'),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -472,6 +582,28 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
                       },
                       width: double.infinity,
                     );
+                    final Widget statusField = AppDropdownField<TaskStatus>(
+                      label: 'Статус',
+                      value: widget.controller.status,
+                      fieldKey: const Key('task-editor-status-dropdown'),
+                      items: widget.controller.editableStatuses
+                          .map(
+                            (TaskStatus value) => DropdownMenuItem<TaskStatus>(
+                              key: Key(
+                                'task-editor-status-option-${value.name}',
+                              ),
+                              value: value,
+                              child: Text(value.label),
+                            ),
+                          )
+                          .toList(growable: false),
+                      onChanged: (TaskStatus? value) {
+                        if (value != null) {
+                          widget.controller.updateStatus(value);
+                        }
+                      },
+                      width: double.infinity,
+                    );
 
                     if (stackFields) {
                       return Column(
@@ -480,6 +612,8 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
                           priorityField,
                           const SizedBox(height: AppSpacing.lg),
                           categoryField,
+                          const SizedBox(height: AppSpacing.lg),
+                          statusField,
                         ],
                       );
                     }
@@ -489,6 +623,8 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
                         Expanded(child: priorityField),
                         const SizedBox(width: AppSpacing.lg),
                         Expanded(child: categoryField),
+                        const SizedBox(width: AppSpacing.lg),
+                        Expanded(child: statusField),
                       ],
                     );
                   },

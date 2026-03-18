@@ -1,5 +1,6 @@
 import 'package:isar/isar.dart';
 
+import '../../../../core/reminders/reminder_lead_time_preset.dart';
 import '../../domain/entities/app_theme_palette.dart';
 import '../../domain/entities/app_theme_preference.dart';
 import '../models/app_settings_local_model.dart';
@@ -38,6 +39,12 @@ class AppSettingsLocalDataSource {
   Future<void> saveMinimumFreeSlotMinutes(int minutes) async {
     await _saveSettings((AppSettingsLocalModel settings) {
       settings.minimumFreeSlotMinutes = minutes;
+    });
+  }
+
+  Future<void> saveDefaultReminderPreset(ReminderLeadTimePreset preset) async {
+    await _saveSettings((AppSettingsLocalModel settings) {
+      settings.defaultReminderPreset = preset;
     });
   }
 

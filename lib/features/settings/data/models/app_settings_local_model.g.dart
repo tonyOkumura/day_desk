@@ -18,40 +18,46 @@ const AppSettingsLocalModelSchema = CollectionSchema(
   name: r'AppSettingsLocalModel',
   id: -7711851287718184256,
   properties: {
-    r'minimumFreeSlotMinutes': PropertySchema(
+    r'defaultReminderPreset': PropertySchema(
       id: 0,
+      name: r'defaultReminderPreset',
+      type: IsarType.string,
+      enumMap: _AppSettingsLocalModeldefaultReminderPresetEnumValueMap,
+    ),
+    r'minimumFreeSlotMinutes': PropertySchema(
+      id: 1,
       name: r'minimumFreeSlotMinutes',
       type: IsarType.long,
     ),
     r'notificationsEnabled': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'notificationsEnabled',
       type: IsarType.bool,
     ),
     r'themePalette': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'themePalette',
       type: IsarType.string,
       enumMap: _AppSettingsLocalModelthemePaletteEnumValueMap,
     ),
     r'themePreference': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'themePreference',
       type: IsarType.string,
       enumMap: _AppSettingsLocalModelthemePreferenceEnumValueMap,
     ),
     r'updatedAt': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'workDayEndHour': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'workDayEndHour',
       type: IsarType.long,
     ),
     r'workDayStartHour': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'workDayStartHour',
       type: IsarType.long,
     )
@@ -76,6 +82,7 @@ int _appSettingsLocalModelEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  bytesCount += 3 + object.defaultReminderPreset.name.length * 3;
   bytesCount += 3 + object.themePalette.name.length * 3;
   bytesCount += 3 + object.themePreference.name.length * 3;
   return bytesCount;
@@ -87,13 +94,14 @@ void _appSettingsLocalModelSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeLong(offsets[0], object.minimumFreeSlotMinutes);
-  writer.writeBool(offsets[1], object.notificationsEnabled);
-  writer.writeString(offsets[2], object.themePalette.name);
-  writer.writeString(offsets[3], object.themePreference.name);
-  writer.writeDateTime(offsets[4], object.updatedAt);
-  writer.writeLong(offsets[5], object.workDayEndHour);
-  writer.writeLong(offsets[6], object.workDayStartHour);
+  writer.writeString(offsets[0], object.defaultReminderPreset.name);
+  writer.writeLong(offsets[1], object.minimumFreeSlotMinutes);
+  writer.writeBool(offsets[2], object.notificationsEnabled);
+  writer.writeString(offsets[3], object.themePalette.name);
+  writer.writeString(offsets[4], object.themePreference.name);
+  writer.writeDateTime(offsets[5], object.updatedAt);
+  writer.writeLong(offsets[6], object.workDayEndHour);
+  writer.writeLong(offsets[7], object.workDayStartHour);
 }
 
 AppSettingsLocalModel _appSettingsLocalModelDeserialize(
@@ -103,18 +111,22 @@ AppSettingsLocalModel _appSettingsLocalModelDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = AppSettingsLocalModel();
+  object.defaultReminderPreset =
+      _AppSettingsLocalModeldefaultReminderPresetValueEnumMap[
+              reader.readStringOrNull(offsets[0])] ??
+          ReminderLeadTimePreset.none;
   object.id = id;
-  object.minimumFreeSlotMinutes = reader.readLong(offsets[0]);
-  object.notificationsEnabled = reader.readBool(offsets[1]);
+  object.minimumFreeSlotMinutes = reader.readLong(offsets[1]);
+  object.notificationsEnabled = reader.readBool(offsets[2]);
   object.themePalette = _AppSettingsLocalModelthemePaletteValueEnumMap[
-          reader.readStringOrNull(offsets[2])] ??
+          reader.readStringOrNull(offsets[3])] ??
       AppThemePalette.blue;
   object.themePreference = _AppSettingsLocalModelthemePreferenceValueEnumMap[
-          reader.readStringOrNull(offsets[3])] ??
+          reader.readStringOrNull(offsets[4])] ??
       AppThemePreference.system;
-  object.updatedAt = reader.readDateTime(offsets[4]);
-  object.workDayEndHour = reader.readLong(offsets[5]);
-  object.workDayStartHour = reader.readLong(offsets[6]);
+  object.updatedAt = reader.readDateTime(offsets[5]);
+  object.workDayEndHour = reader.readLong(offsets[6]);
+  object.workDayStartHour = reader.readLong(offsets[7]);
   return object;
 }
 
@@ -126,28 +138,44 @@ P _appSettingsLocalModelDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readLong(offset)) as P;
+      return (_AppSettingsLocalModeldefaultReminderPresetValueEnumMap[
+              reader.readStringOrNull(offset)] ??
+          ReminderLeadTimePreset.none) as P;
     case 1:
-      return (reader.readBool(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 2:
+      return (reader.readBool(offset)) as P;
+    case 3:
       return (_AppSettingsLocalModelthemePaletteValueEnumMap[
               reader.readStringOrNull(offset)] ??
           AppThemePalette.blue) as P;
-    case 3:
+    case 4:
       return (_AppSettingsLocalModelthemePreferenceValueEnumMap[
               reader.readStringOrNull(offset)] ??
           AppThemePreference.system) as P;
-    case 4:
-      return (reader.readDateTime(offset)) as P;
     case 5:
-      return (reader.readLong(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 6:
+      return (reader.readLong(offset)) as P;
+    case 7:
       return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
 }
 
+const _AppSettingsLocalModeldefaultReminderPresetEnumValueMap = {
+  r'none': r'none',
+  r'minutes15': r'minutes15',
+  r'hour1': r'hour1',
+  r'day1': r'day1',
+};
+const _AppSettingsLocalModeldefaultReminderPresetValueEnumMap = {
+  r'none': ReminderLeadTimePreset.none,
+  r'minutes15': ReminderLeadTimePreset.minutes15,
+  r'hour1': ReminderLeadTimePreset.hour1,
+  r'day1': ReminderLeadTimePreset.day1,
+};
 const _AppSettingsLocalModelthemePaletteEnumValueMap = {
   r'blue': r'blue',
   r'green': r'green',
@@ -266,6 +294,145 @@ extension AppSettingsLocalModelQueryWhere on QueryBuilder<AppSettingsLocalModel,
 
 extension AppSettingsLocalModelQueryFilter on QueryBuilder<
     AppSettingsLocalModel, AppSettingsLocalModel, QFilterCondition> {
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> defaultReminderPresetEqualTo(
+    ReminderLeadTimePreset value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'defaultReminderPreset',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> defaultReminderPresetGreaterThan(
+    ReminderLeadTimePreset value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'defaultReminderPreset',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> defaultReminderPresetLessThan(
+    ReminderLeadTimePreset value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'defaultReminderPreset',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> defaultReminderPresetBetween(
+    ReminderLeadTimePreset lower,
+    ReminderLeadTimePreset upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'defaultReminderPreset',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> defaultReminderPresetStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'defaultReminderPreset',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> defaultReminderPresetEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'defaultReminderPreset',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+          QAfterFilterCondition>
+      defaultReminderPresetContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'defaultReminderPreset',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+          QAfterFilterCondition>
+      defaultReminderPresetMatches(String pattern,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'defaultReminderPreset',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> defaultReminderPresetIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'defaultReminderPreset',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
+      QAfterFilterCondition> defaultReminderPresetIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'defaultReminderPreset',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel,
       QAfterFilterCondition> idEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
@@ -842,6 +1009,20 @@ extension AppSettingsLocalModelQueryLinks on QueryBuilder<AppSettingsLocalModel,
 extension AppSettingsLocalModelQuerySortBy
     on QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QSortBy> {
   QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      sortByDefaultReminderPreset() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'defaultReminderPreset', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      sortByDefaultReminderPresetDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'defaultReminderPreset', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
       sortByMinimumFreeSlotMinutes() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'minimumFreeSlotMinutes', Sort.asc);
@@ -942,6 +1123,20 @@ extension AppSettingsLocalModelQuerySortBy
 
 extension AppSettingsLocalModelQuerySortThenBy
     on QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QSortThenBy> {
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      thenByDefaultReminderPreset() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'defaultReminderPreset', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
+      thenByDefaultReminderPresetDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'defaultReminderPreset', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QAfterSortBy>
       thenById() {
     return QueryBuilder.apply(this, (query) {
@@ -1058,6 +1253,14 @@ extension AppSettingsLocalModelQuerySortThenBy
 extension AppSettingsLocalModelQueryWhereDistinct
     on QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QDistinct> {
   QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QDistinct>
+      distinctByDefaultReminderPreset({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'defaultReminderPreset',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, AppSettingsLocalModel, QDistinct>
       distinctByMinimumFreeSlotMinutes() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'minimumFreeSlotMinutes');
@@ -1113,6 +1316,13 @@ extension AppSettingsLocalModelQueryProperty on QueryBuilder<
   QueryBuilder<AppSettingsLocalModel, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<AppSettingsLocalModel, ReminderLeadTimePreset, QQueryOperations>
+      defaultReminderPresetProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'defaultReminderPreset');
     });
   }
 

@@ -97,6 +97,65 @@ void main() {
   });
 
   test(
+    'TasksController фильтрует overdue и сортирует статусы по приоритету экрана',
+    () async {
+      final FakeTaskRepository repository = FakeTaskRepository(
+        nowProvider: () => DateTime(2026, 3, 20, 12),
+        initialTasks: <Task>[
+          _task(
+            id: 'pending',
+            title: 'Активная задача',
+            date: DateTime(2026, 3, 21),
+          ),
+          _task(
+            id: 'overdue',
+            title: 'Просроченная задача',
+            date: DateTime(2026, 3, 18),
+            deadline: DateTime(2026, 3, 19, 18),
+          ),
+          _task(
+            id: 'postponed',
+            title: 'Отложенная задача',
+            date: DateTime(2026, 3, 18),
+            status: TaskStatus.postponed,
+          ),
+          _task(
+            id: 'completed',
+            title: 'Готовая задача',
+            date: DateTime(2026, 3, 18),
+            status: TaskStatus.completed,
+          ),
+        ],
+      );
+      final TasksController controller = TasksController(
+        repository: repository,
+        dateFormatter: AppDateFormatter(),
+        logger: AppLogger(),
+        notificationService: RecordingTaskNotificationService(),
+      );
+
+      await controller.selectListMode(TaskListMode.allTasks);
+
+      expect(
+        controller.visibleTasks.map((Task task) => task.id).toList(),
+        <String>['overdue', 'pending', 'postponed', 'completed'],
+      );
+
+      controller.selectStatusFilter(TaskStatusFilter.overdue);
+      expect(
+        controller.visibleTasks.map((Task task) => task.id).toList(),
+        <String>['overdue'],
+      );
+
+      controller.selectStatusFilter(TaskStatusFilter.postponed);
+      expect(
+        controller.visibleTasks.map((Task task) => task.id).toList(),
+        <String>['postponed'],
+      );
+    },
+  );
+
+  test(
     'TasksController переводит экран в error state при ошибке загрузки',
     () async {
       final TasksController controller = TasksController(
@@ -119,13 +178,16 @@ Task _task({
   required String title,
   required DateTime date,
   TaskPriority priority = TaskPriority.medium,
+  TaskStatus status = TaskStatus.pending,
+  DateTime? deadline,
 }) {
   return Task(
     id: id,
     title: title,
     date: date,
+    deadline: deadline,
     priority: priority,
-    status: TaskStatus.pending,
+    status: status,
     category: TaskCategory.work,
     createdAt: date,
     updatedAt: date,

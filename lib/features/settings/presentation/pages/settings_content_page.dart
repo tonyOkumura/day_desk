@@ -10,6 +10,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../core/app_info/app_info_service.dart';
 import '../../../../core/date/app_date_formatter.dart';
+import '../../../../core/reminders/reminder_lead_time_preset.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../core/widgets/app_dropdown_field.dart';
@@ -140,6 +141,32 @@ class SettingsContentPage extends GetView<SettingsController> {
                     onChanged: (int? minutes) {
                       if (minutes != null) {
                         controller.setMinimumFreeSlotMinutes(minutes);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  AppDropdownField<ReminderLeadTimePreset>(
+                    fieldKey: const Key('default-reminder-preset-dropdown'),
+                    label: 'Напоминание по умолчанию',
+                    value: controller.defaultReminderPreset,
+                    items: SettingsController.reminderPresetOptions
+                        .map(
+                          (
+                            ReminderLeadTimePreset preset,
+                          ) => DropdownMenuItem<ReminderLeadTimePreset>(
+                            value: preset,
+                            child: Text(
+                              preset.label,
+                              key: Key(
+                                'default-reminder-preset-option-${preset.name}',
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (ReminderLeadTimePreset? preset) {
+                      if (preset != null) {
+                        controller.setDefaultReminderPreset(preset);
                       }
                     },
                   ),
@@ -281,6 +308,14 @@ class SettingsContentPage extends GetView<SettingsController> {
                   () => Text(
                     'minimum_free_slot='
                     '${controller.minimumFreeSlotMinutes}',
+                    style: AppTypography.mono(context),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Obx(
+                  () => Text(
+                    'default_reminder='
+                    '${controller.defaultReminderPreset.name}',
                     style: AppTypography.mono(context),
                   ),
                 ),

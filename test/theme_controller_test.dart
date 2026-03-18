@@ -2,6 +2,7 @@ import 'package:day_desk/app/controllers/theme_controller.dart';
 import 'package:day_desk/core/logging/app_logger.dart';
 import 'package:day_desk/core/notifications/app_notification_service.dart';
 import 'package:day_desk/core/notifications/notification_config.dart';
+import 'package:day_desk/core/reminders/reminder_lead_time_preset.dart';
 import 'package:day_desk/features/settings/domain/entities/app_settings.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_palette.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_preference.dart';
@@ -262,6 +263,11 @@ class FakeSettingsRepository implements AppSettingsRepository {
   @override
   Future<void> saveMinimumFreeSlotMinutes(int minutes) async {
     _settings = _settings.copyWith(minimumFreeSlotMinutes: minutes);
+  }
+
+  @override
+  Future<void> saveDefaultReminderPreset(ReminderLeadTimePreset preset) async {
+    _settings = _settings.copyWith(defaultReminderPreset: preset);
   }
 
   @override

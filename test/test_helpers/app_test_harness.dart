@@ -7,6 +7,7 @@ import 'package:day_desk/core/date/app_date_formatter.dart';
 import 'package:day_desk/core/logging/app_logger.dart';
 import 'package:day_desk/core/notifications/app_notification_service.dart';
 import 'package:day_desk/core/notifications/notification_config.dart';
+import 'package:day_desk/core/reminders/reminder_lead_time_preset.dart';
 import 'package:day_desk/features/settings/domain/entities/app_settings.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_palette.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_preference.dart';
@@ -172,6 +173,11 @@ class FakeAppSettingsRepository implements AppSettingsRepository {
   }
 
   @override
+  Future<void> saveDefaultReminderPreset(ReminderLeadTimePreset preset) async {
+    _settings = _settings.copyWith(defaultReminderPreset: preset);
+  }
+
+  @override
   Future<void> saveNotificationsEnabled(bool enabled) async {
     _settings = _settings.copyWith(notificationsEnabled: enabled);
   }
@@ -185,13 +191,16 @@ class FakeAppSettingsRepository implements AppSettingsRepository {
 class FakeTaskRepository implements TaskRepository {
   FakeTaskRepository({
     List<Task>? initialTasks,
+    DateTime Function()? nowProvider,
     this.failOnLoad = false,
     this.failOnDelete = false,
     this.failOnUpdate = false,
     this.failOnCreate = false,
-  }) : _tasks = List<Task>.from(initialTasks ?? const <Task>[]);
+  }) : _tasks = List<Task>.from(initialTasks ?? const <Task>[]),
+       _nowProvider = nowProvider ?? DateTime.now;
 
   final List<Task> _tasks;
+  final DateTime Function() _nowProvider;
   final bool failOnLoad;
   final bool failOnDelete;
   final bool failOnUpdate;
@@ -205,7 +214,7 @@ class FakeTaskRepository implements TaskRepository {
       throw StateError('create failed');
     }
 
-    _tasks.add(task);
+    _tasks.add(task.normalizedForPersistence());
     _emit();
   }
 
@@ -220,7 +229,7 @@ class FakeTaskRepository implements TaskRepository {
       throw StateError('task not found');
     }
 
-    _tasks[index] = task;
+    _tasks[index] = task.normalizedForPersistence();
     _emit();
   }
 
@@ -246,6 +255,7 @@ class FakeTaskRepository implements TaskRepository {
         .where((Task task) {
           return !task.date.isBefore(dayStart) && task.date.isBefore(nextDay);
         })
+        .map(_materializeTask)
         .toList(growable: false);
   }
 
@@ -255,7 +265,7 @@ class FakeTaskRepository implements TaskRepository {
       throw StateError('load failed');
     }
 
-    return List<Task>.unmodifiable(_tasks);
+    return List<Task>.unmodifiable(_tasks.map(_materializeTask));
   }
 
   @override
@@ -268,6 +278,7 @@ class FakeTaskRepository implements TaskRepository {
           .where((Task task) {
             return !task.date.isBefore(dayStart) && task.date.isBefore(nextDay);
           })
+          .map(_materializeTask)
           .toList(growable: false);
     });
   }
@@ -293,16 +304,54 @@ class FakeTaskRepository implements TaskRepository {
   }
 
   @override
+  Future<void> setTaskPostponed(
+    String taskId, {
+    required bool postponed,
+  }) async {
+    final Task task = _tasks.firstWhere((Task item) => item.id == taskId);
+    await updateTask(
+      task.copyWith(
+        status: postponed ? TaskStatus.postponed : TaskStatus.pending,
+        updatedAt: DateTime.now(),
+      ),
+    );
+  }
+
+  @override
   Future<void> rescheduleTask(
     String taskId, {
     required DateTime date,
     DateTime? startTime,
   }) async {
     final Task task = _tasks.firstWhere((Task item) => item.id == taskId);
+    final DateTime? nextStartTime = startTime ?? task.startTime;
     await updateTask(
       task.copyWith(
         date: DateTime(date.year, date.month, date.day),
-        startTime: startTime,
+        startTime: nextStartTime == null
+            ? null
+            : DateTime(
+                date.year,
+                date.month,
+                date.day,
+                nextStartTime.hour,
+                nextStartTime.minute,
+                nextStartTime.second,
+                nextStartTime.millisecond,
+                nextStartTime.microsecond,
+              ),
+        deadline: task.deadline == null
+            ? null
+            : DateTime(
+                date.year,
+                date.month,
+                date.day,
+                task.deadline!.hour,
+                task.deadline!.minute,
+                task.deadline!.second,
+                task.deadline!.millisecond,
+                task.deadline!.microsecond,
+              ),
         updatedAt: DateTime.now(),
       ),
     );
@@ -314,5 +363,11 @@ class FakeTaskRepository implements TaskRepository {
 
   void _emit() {
     _streamController.add(List<Task>.unmodifiable(_tasks));
+  }
+
+  Task _materializeTask(Task task) {
+    return task.withResolvedReminderSchedule().withEffectiveStatus(
+      reference: _nowProvider(),
+    );
   }
 }

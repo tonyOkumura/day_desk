@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../../../core/date/app_date_formatter.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../core/notifications/app_notification_service.dart';
+import '../../../../core/reminders/reminder_lead_time_preset.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/task_category.dart';
 import '../../domain/entities/task_priority.dart';
@@ -17,6 +18,8 @@ class TaskEditorController {
     required AppDateFormatter dateFormatter,
     required AppLogger logger,
     required AppNotificationService notificationService,
+    ReminderLeadTimePreset defaultReminderPreset =
+        ReminderLeadTimePreset.minutes15,
     Task? initialTask,
     DateTime? initialDate,
   }) : _repository = repository,
@@ -31,10 +34,13 @@ class TaskEditorController {
            .obs,
        _startTime = Rxn<DateTime>(initialTask?.startTime),
        _durationMinutes = RxnInt(initialTask?.durationMinutes),
+       _deadline = Rxn<DateTime>(initialTask?.deadline),
+       _reminderPreset =
+           (initialTask?.reminderPreset ?? defaultReminderPreset).obs,
        _priority = (initialTask?.priority ?? TaskPriority.medium).obs,
        _category = (initialTask?.category ?? TaskCategory.other).obs,
        _isAllDay = (initialTask?.isAllDay ?? false).obs,
-       _status = (initialTask?.status ?? TaskStatus.pending).obs,
+       _status = (_normalizeEditorStatus(initialTask?.status)).obs,
        _saving = false.obs {
     _initialSnapshot = _snapshot;
   }
@@ -51,6 +57,8 @@ class TaskEditorController {
   final Rx<DateTime> _date;
   final Rxn<DateTime> _startTime;
   final RxnInt _durationMinutes;
+  final Rxn<DateTime> _deadline;
+  final Rx<ReminderLeadTimePreset> _reminderPreset;
   final Rx<TaskPriority> _priority;
   final Rx<TaskCategory> _category;
   final RxBool _isAllDay;
@@ -71,6 +79,9 @@ class TaskEditorController {
   DateTime get date => _date.value;
   DateTime? get startTime => _startTime.value;
   int? get durationMinutes => _durationMinutes.value;
+  DateTime? get deadline => _deadline.value;
+  ReminderLeadTimePreset get reminderPreset => _reminderPreset.value;
+  DateTime? get resolvedReminderAt => _draftReminderAt();
   TaskPriority get priority => _priority.value;
   TaskCategory get category => _category.value;
   TaskStatus get status => _status.value;
@@ -78,9 +89,27 @@ class TaskEditorController {
   String get titleText => isEditing ? 'Редактировать задачу' : 'Новая задача';
   String get saveLabel => isEditing ? 'Сохранить' : 'Создать';
   String get dateLabel => _dateFormatter.formatFullDate(_date.value);
+  String get deadlineLabel => _deadline.value == null
+      ? 'Без дедлайна'
+      : _dateFormatter.formatDateTime(_deadline.value!);
   String get startTimeLabel => _startTime.value == null
       ? 'Без времени'
       : _dateFormatter.formatTime(_startTime.value!);
+  List<TaskStatus> get editableStatuses => TaskStatus.editorValues;
+  List<ReminderLeadTimePreset> get reminderPresetOptions =>
+      ReminderLeadTimePreset.values;
+  String? get reminderHelperText {
+    if (!reminderPreset.hasReminder) {
+      return null;
+    }
+
+    final DateTime? reminderAt = resolvedReminderAt;
+    if (reminderAt != null) {
+      return 'Сработает ${_dateFormatter.formatDateTime(reminderAt)}';
+    }
+
+    return 'Напоминание активируется, когда появится дедлайн или точное время.';
+  }
 
   void updateTitle(String value) {
     _title.value = value;
@@ -107,6 +136,14 @@ class TaskEditorController {
         currentStartTime.minute,
       );
     }
+  }
+
+  void updateDeadline(DateTime? value) {
+    _deadline.value = value;
+  }
+
+  void updateReminderPreset(ReminderLeadTimePreset value) {
+    _reminderPreset.value = value;
   }
 
   void setAllDay(bool value) {
@@ -151,6 +188,14 @@ class TaskEditorController {
     _category.value = value;
   }
 
+  void updateStatus(TaskStatus value) {
+    if (!value.selectableInEditor) {
+      return;
+    }
+
+    _status.value = value;
+  }
+
   Future<Task?> save() async {
     final bool wasEditing = isEditing;
     final String trimmedTitle = _title.value.trim();
@@ -159,21 +204,12 @@ class TaskEditorController {
       return null;
     }
 
-    final String trimmedDescription = _description.value.trim();
     final DateTime now = DateTime.now();
-    final Task task = Task(
-      id: _persistedTask?.id ?? _generateTaskId(),
+    final Task task = _buildDraftTask(
       title: trimmedTitle,
-      description: trimmedDescription.isEmpty ? null : trimmedDescription,
-      date: _dateFormatter.startOfDay(_date.value),
-      startTime: _isAllDay.value ? null : _startTime.value,
-      durationMinutes: _isAllDay.value ? null : _durationMinutes.value,
-      priority: _priority.value,
-      status: _status.value,
-      category: _category.value,
-      isAllDay: _isAllDay.value,
-      createdAt: _persistedTask?.createdAt ?? now,
+      description: _description.value.trim(),
       updatedAt: now,
+      createdAt: _persistedTask?.createdAt ?? now,
     );
 
     _saving.value = true;
@@ -222,10 +258,68 @@ class TaskEditorController {
       date: _dateFormatter.startOfDay(_date.value),
       startTime: _startTime.value,
       durationMinutes: _durationMinutes.value,
+      deadline: _deadline.value,
+      reminderPreset: _reminderPreset.value,
       priority: _priority.value,
       category: _category.value,
       isAllDay: _isAllDay.value,
+      status: _status.value,
     );
+  }
+
+  Task _buildDraftTask({
+    String? title,
+    String? description,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    final String resolvedTitle = title ?? _title.value.trim();
+    final String resolvedDescription = description ?? _description.value.trim();
+
+    return Task(
+      id: _persistedTask?.id ?? _generateTaskId(),
+      title: resolvedTitle,
+      description: resolvedDescription.isEmpty ? null : resolvedDescription,
+      date: _dateFormatter.startOfDay(_date.value),
+      startTime: _isAllDay.value ? null : _startTime.value,
+      durationMinutes: _isAllDay.value ? null : _durationMinutes.value,
+      deadline: _deadline.value,
+      reminderPreset: _reminderPreset.value,
+      reminderAt: _draftReminderAt(),
+      priority: _priority.value,
+      status: _status.value,
+      category: _category.value,
+      isAllDay: _isAllDay.value,
+      createdAt: createdAt ?? _persistedTask?.createdAt ?? DateTime.now(),
+      updatedAt: updatedAt ?? DateTime.now(),
+    );
+  }
+
+  DateTime? _draftReminderAt() {
+    return _reminderPreset.value.resolveReminderAt(_draftReminderAnchor());
+  }
+
+  DateTime? _draftReminderAnchor() {
+    if (_deadline.value != null) {
+      return _deadline.value;
+    }
+    if (!_isAllDay.value && _startTime.value != null) {
+      return _startTime.value;
+    }
+    if (_isAllDay.value) {
+      final DateTime selectedDate = _date.value;
+      return DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    }
+
+    return null;
+  }
+
+  static TaskStatus _normalizeEditorStatus(TaskStatus? status) {
+    if (status == null || status == TaskStatus.overdue) {
+      return TaskStatus.pending;
+    }
+
+    return status;
   }
 }
 
@@ -236,9 +330,12 @@ class _TaskEditorSnapshot {
     required this.date,
     required this.startTime,
     required this.durationMinutes,
+    required this.deadline,
+    required this.reminderPreset,
     required this.priority,
     required this.category,
     required this.isAllDay,
+    required this.status,
   });
 
   final String title;
@@ -246,9 +343,12 @@ class _TaskEditorSnapshot {
   final DateTime date;
   final DateTime? startTime;
   final int? durationMinutes;
+  final DateTime? deadline;
+  final ReminderLeadTimePreset reminderPreset;
   final TaskPriority priority;
   final TaskCategory category;
   final bool isAllDay;
+  final TaskStatus status;
 
   @override
   bool operator ==(Object other) {
@@ -261,9 +361,12 @@ class _TaskEditorSnapshot {
         other.date == date &&
         other.startTime == startTime &&
         other.durationMinutes == durationMinutes &&
+        other.deadline == deadline &&
+        other.reminderPreset == reminderPreset &&
         other.priority == priority &&
         other.category == category &&
-        other.isAllDay == isAllDay;
+        other.isAllDay == isAllDay &&
+        other.status == status;
   }
 
   @override
@@ -274,9 +377,12 @@ class _TaskEditorSnapshot {
       date,
       startTime,
       durationMinutes,
+      deadline,
+      reminderPreset,
       priority,
       category,
       isAllDay,
+      status,
     );
   }
 }

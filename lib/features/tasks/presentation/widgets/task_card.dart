@@ -3,15 +3,18 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../core/date/app_date_formatter.dart';
+import '../../../../core/reminders/reminder_lead_time_preset.dart';
 import '../../../../core/widgets/app_surface_card.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/task_priority.dart';
+import '../../domain/entities/task_status.dart';
 
 class TaskCard extends StatelessWidget {
   const TaskCard({
     required this.task,
     required this.dateFormatter,
     required this.onToggleCompleted,
+    required this.onTogglePostponed,
     required this.onEdit,
     required this.onDelete,
     required this.onReschedule,
@@ -21,6 +24,7 @@ class TaskCard extends StatelessWidget {
   final Task task;
   final AppDateFormatter dateFormatter;
   final VoidCallback onToggleCompleted;
+  final VoidCallback onTogglePostponed;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onReschedule;
@@ -31,6 +35,8 @@ class TaskCard extends StatelessWidget {
     final TextTheme textTheme = theme.textTheme;
     final ColorScheme colorScheme = theme.colorScheme;
     final bool completed = task.isCompleted;
+    final bool overdue = task.isOverdue;
+    final bool postponed = task.isPostponed;
 
     return AppSurfaceCard(
       key: Key('task-card-${task.id}'),
@@ -53,6 +59,8 @@ class TaskCard extends StatelessWidget {
                             : null,
                         color: completed
                             ? colorScheme.onSurfaceVariant
+                            : overdue
+                            ? colorScheme.error
                             : textTheme.titleLarge?.color,
                       ),
                     ),
@@ -106,10 +114,44 @@ class TaskCard extends StatelessWidget {
                 icon: Icons.sell_outlined,
                 label: task.category.label,
               ),
+              if (task.deadline != null)
+                _TaskMetaChip(
+                  icon: Icons.flag_outlined,
+                  label:
+                      'Дедлайн: ${dateFormatter.formatDateTime(task.deadline!)}',
+                  tone: overdue ? _TaskMetaTone.error : _TaskMetaTone.neutral,
+                ),
+              if (task.reminderPreset != ReminderLeadTimePreset.none)
+                _TaskMetaChip(
+                  icon: Icons.notifications_active_outlined,
+                  label: task.reminderPreset.taskChipLabel,
+                ),
+              if (task.reminderPreset != ReminderLeadTimePreset.none &&
+                  task.reminderAt != null)
+                _TaskMetaChip(
+                  icon: Icons.alarm_outlined,
+                  label:
+                      'Сработает: ${dateFormatter.formatDateTime(task.reminderAt!)}',
+                )
+              else if (task.reminderPreset != ReminderLeadTimePreset.none)
+                const _TaskMetaChip(
+                  icon: Icons.hourglass_bottom_rounded,
+                  label: 'Ждёт дедлайн или время',
+                ),
               _TaskMetaChip(
-                icon: completed ? Icons.done_all_rounded : Icons.work_outline,
+                icon: switch (task.status) {
+                  TaskStatus.completed => Icons.done_all_rounded,
+                  TaskStatus.postponed => Icons.pause_circle_outline_rounded,
+                  TaskStatus.overdue => Icons.error_outline_rounded,
+                  TaskStatus.pending => Icons.work_outline,
+                },
                 label: task.status.label,
-                highlighted: completed,
+                tone: switch (task.status) {
+                  TaskStatus.completed => _TaskMetaTone.primary,
+                  TaskStatus.postponed => _TaskMetaTone.tertiary,
+                  TaskStatus.overdue => _TaskMetaTone.error,
+                  TaskStatus.pending => _TaskMetaTone.neutral,
+                },
               ),
             ],
           ),
@@ -129,6 +171,17 @@ class TaskCard extends StatelessWidget {
                 onPressed: onReschedule,
                 icon: const Icon(Icons.event_repeat_outlined),
               ),
+              if (!completed)
+                IconButton(
+                  key: Key('task-postpone-button-${task.id}'),
+                  tooltip: postponed ? 'Вернуть в работу' : 'Отложить',
+                  onPressed: onTogglePostponed,
+                  icon: Icon(
+                    postponed
+                        ? Icons.play_circle_outline_rounded
+                        : Icons.pause_circle_outline_rounded,
+                  ),
+                ),
               IconButton(
                 key: Key('task-delete-button-${task.id}'),
                 tooltip: 'Удалить',
@@ -175,26 +228,39 @@ class _TaskMetaChip extends StatelessWidget {
   const _TaskMetaChip({
     required this.icon,
     required this.label,
-    this.highlighted = false,
+    this.tone = _TaskMetaTone.neutral,
   });
 
   final IconData icon;
   final String label;
-  final bool highlighted;
+  final _TaskMetaTone tone;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colorScheme = theme.colorScheme;
-    final Color foreground = highlighted
-        ? colorScheme.primary
-        : colorScheme.onSurfaceVariant;
+    final Color foreground = switch (tone) {
+      _TaskMetaTone.neutral => colorScheme.onSurfaceVariant,
+      _TaskMetaTone.primary => colorScheme.primary,
+      _TaskMetaTone.tertiary => colorScheme.tertiary,
+      _TaskMetaTone.error => colorScheme.error,
+    };
+    final Color background = switch (tone) {
+      _TaskMetaTone.neutral => colorScheme.surfaceContainerHighest.withValues(
+        alpha: 0.6,
+      ),
+      _TaskMetaTone.primary => colorScheme.primaryContainer.withValues(
+        alpha: 0.65,
+      ),
+      _TaskMetaTone.tertiary => colorScheme.tertiaryContainer.withValues(
+        alpha: 0.65,
+      ),
+      _TaskMetaTone.error => colorScheme.errorContainer.withValues(alpha: 0.72),
+    };
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: highlighted
-            ? colorScheme.primaryContainer.withValues(alpha: 0.65)
-            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        color: background,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.3),
@@ -222,3 +288,5 @@ class _TaskMetaChip extends StatelessWidget {
     );
   }
 }
+
+enum _TaskMetaTone { neutral, primary, tertiary, error }

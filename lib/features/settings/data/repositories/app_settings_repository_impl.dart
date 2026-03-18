@@ -1,3 +1,4 @@
+import '../../../../core/reminders/reminder_lead_time_preset.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../domain/entities/app_theme_palette.dart';
 import '../../domain/entities/app_theme_preference.dart';
@@ -24,6 +25,7 @@ class AppSettingsRepositoryImpl implements AppSettingsRepository {
       workDayStartHour: settings.workDayStartHour,
       workDayEndHour: settings.workDayEndHour,
       minimumFreeSlotMinutes: settings.minimumFreeSlotMinutes,
+      defaultReminderPreset: settings.defaultReminderPreset,
       notificationsEnabled: settings.notificationsEnabled,
     );
   }
@@ -52,6 +54,11 @@ class AppSettingsRepositoryImpl implements AppSettingsRepository {
   @override
   Future<void> saveMinimumFreeSlotMinutes(int minutes) {
     return _localDataSource.saveMinimumFreeSlotMinutes(minutes);
+  }
+
+  @override
+  Future<void> saveDefaultReminderPreset(ReminderLeadTimePreset preset) {
+    return _localDataSource.saveDefaultReminderPreset(preset);
   }
 
   @override

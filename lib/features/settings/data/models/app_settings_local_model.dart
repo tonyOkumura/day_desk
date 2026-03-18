@@ -1,5 +1,6 @@
 import 'package:isar/isar.dart';
 
+import '../../../../core/reminders/reminder_lead_time_preset.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../domain/entities/app_theme_palette.dart';
 import '../../domain/entities/app_theme_preference.dart';
@@ -25,6 +26,10 @@ class AppSettingsLocalModel {
   int workDayEndHour = AppSettings.defaultWorkDayEndHour;
 
   int minimumFreeSlotMinutes = AppSettings.defaultMinimumFreeSlotMinutes;
+
+  @Enumerated(EnumType.name)
+  ReminderLeadTimePreset defaultReminderPreset =
+      AppSettings.defaultReminderLeadTimePreset;
 
   bool notificationsEnabled = AppSettings.defaultNotificationsEnabled;
 

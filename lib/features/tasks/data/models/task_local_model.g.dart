@@ -33,50 +33,66 @@ const TaskLocalModelSchema = CollectionSchema(
       name: r'date',
       type: IsarType.dateTime,
     ),
-    r'description': PropertySchema(
+    r'deadline': PropertySchema(
       id: 3,
+      name: r'deadline',
+      type: IsarType.dateTime,
+    ),
+    r'description': PropertySchema(
+      id: 4,
       name: r'description',
       type: IsarType.string,
     ),
     r'durationMinutes': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'durationMinutes',
       type: IsarType.long,
     ),
     r'isAllDay': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'isAllDay',
       type: IsarType.bool,
     ),
     r'priority': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'priority',
       type: IsarType.string,
       enumMap: _TaskLocalModelpriorityEnumValueMap,
     ),
+    r'reminderAt': PropertySchema(
+      id: 8,
+      name: r'reminderAt',
+      type: IsarType.dateTime,
+    ),
+    r'reminderPreset': PropertySchema(
+      id: 9,
+      name: r'reminderPreset',
+      type: IsarType.string,
+      enumMap: _TaskLocalModelreminderPresetEnumValueMap,
+    ),
     r'startTime': PropertySchema(
-      id: 7,
+      id: 10,
       name: r'startTime',
       type: IsarType.dateTime,
     ),
     r'status': PropertySchema(
-      id: 8,
+      id: 11,
       name: r'status',
       type: IsarType.string,
       enumMap: _TaskLocalModelstatusEnumValueMap,
     ),
     r'taskId': PropertySchema(
-      id: 9,
+      id: 12,
       name: r'taskId',
       type: IsarType.string,
     ),
     r'title': PropertySchema(
-      id: 10,
+      id: 13,
       name: r'title',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 11,
+      id: 14,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -136,6 +152,7 @@ int _taskLocalModelEstimateSize(
     }
   }
   bytesCount += 3 + object.priority.name.length * 3;
+  bytesCount += 3 + object.reminderPreset.name.length * 3;
   bytesCount += 3 + object.status.name.length * 3;
   bytesCount += 3 + object.taskId.length * 3;
   bytesCount += 3 + object.title.length * 3;
@@ -151,15 +168,18 @@ void _taskLocalModelSerialize(
   writer.writeString(offsets[0], object.category.name);
   writer.writeDateTime(offsets[1], object.createdAt);
   writer.writeDateTime(offsets[2], object.date);
-  writer.writeString(offsets[3], object.description);
-  writer.writeLong(offsets[4], object.durationMinutes);
-  writer.writeBool(offsets[5], object.isAllDay);
-  writer.writeString(offsets[6], object.priority.name);
-  writer.writeDateTime(offsets[7], object.startTime);
-  writer.writeString(offsets[8], object.status.name);
-  writer.writeString(offsets[9], object.taskId);
-  writer.writeString(offsets[10], object.title);
-  writer.writeDateTime(offsets[11], object.updatedAt);
+  writer.writeDateTime(offsets[3], object.deadline);
+  writer.writeString(offsets[4], object.description);
+  writer.writeLong(offsets[5], object.durationMinutes);
+  writer.writeBool(offsets[6], object.isAllDay);
+  writer.writeString(offsets[7], object.priority.name);
+  writer.writeDateTime(offsets[8], object.reminderAt);
+  writer.writeString(offsets[9], object.reminderPreset.name);
+  writer.writeDateTime(offsets[10], object.startTime);
+  writer.writeString(offsets[11], object.status.name);
+  writer.writeString(offsets[12], object.taskId);
+  writer.writeString(offsets[13], object.title);
+  writer.writeDateTime(offsets[14], object.updatedAt);
 }
 
 TaskLocalModel _taskLocalModelDeserialize(
@@ -174,20 +194,25 @@ TaskLocalModel _taskLocalModelDeserialize(
       TaskCategory.work;
   object.createdAt = reader.readDateTime(offsets[1]);
   object.date = reader.readDateTime(offsets[2]);
-  object.description = reader.readStringOrNull(offsets[3]);
-  object.durationMinutes = reader.readLongOrNull(offsets[4]);
-  object.isAllDay = reader.readBool(offsets[5]);
+  object.deadline = reader.readDateTimeOrNull(offsets[3]);
+  object.description = reader.readStringOrNull(offsets[4]);
+  object.durationMinutes = reader.readLongOrNull(offsets[5]);
+  object.isAllDay = reader.readBool(offsets[6]);
   object.isarId = id;
   object.priority = _TaskLocalModelpriorityValueEnumMap[
-          reader.readStringOrNull(offsets[6])] ??
+          reader.readStringOrNull(offsets[7])] ??
       TaskPriority.low;
-  object.startTime = reader.readDateTimeOrNull(offsets[7]);
+  object.reminderAt = reader.readDateTimeOrNull(offsets[8]);
+  object.reminderPreset = _TaskLocalModelreminderPresetValueEnumMap[
+          reader.readStringOrNull(offsets[9])] ??
+      ReminderLeadTimePreset.none;
+  object.startTime = reader.readDateTimeOrNull(offsets[10]);
   object.status =
-      _TaskLocalModelstatusValueEnumMap[reader.readStringOrNull(offsets[8])] ??
+      _TaskLocalModelstatusValueEnumMap[reader.readStringOrNull(offsets[11])] ??
           TaskStatus.pending;
-  object.taskId = reader.readString(offsets[9]);
-  object.title = reader.readString(offsets[10]);
-  object.updatedAt = reader.readDateTime(offsets[11]);
+  object.taskId = reader.readString(offsets[12]);
+  object.title = reader.readString(offsets[13]);
+  object.updatedAt = reader.readDateTime(offsets[14]);
   return object;
 }
 
@@ -207,26 +232,34 @@ P _taskLocalModelDeserializeProp<P>(
     case 2:
       return (reader.readDateTime(offset)) as P;
     case 3:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 4:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 5:
-      return (reader.readBool(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 6:
+      return (reader.readBool(offset)) as P;
+    case 7:
       return (_TaskLocalModelpriorityValueEnumMap[
               reader.readStringOrNull(offset)] ??
           TaskPriority.low) as P;
-    case 7:
-      return (reader.readDateTimeOrNull(offset)) as P;
     case 8:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 9:
+      return (_TaskLocalModelreminderPresetValueEnumMap[
+              reader.readStringOrNull(offset)] ??
+          ReminderLeadTimePreset.none) as P;
+    case 10:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 11:
       return (_TaskLocalModelstatusValueEnumMap[
               reader.readStringOrNull(offset)] ??
           TaskStatus.pending) as P;
-    case 9:
+    case 12:
       return (reader.readString(offset)) as P;
-    case 10:
+    case 13:
       return (reader.readString(offset)) as P;
-    case 11:
+    case 14:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -259,13 +292,29 @@ const _TaskLocalModelpriorityValueEnumMap = {
   r'medium': TaskPriority.medium,
   r'high': TaskPriority.high,
 };
+const _TaskLocalModelreminderPresetEnumValueMap = {
+  r'none': r'none',
+  r'minutes15': r'minutes15',
+  r'hour1': r'hour1',
+  r'day1': r'day1',
+};
+const _TaskLocalModelreminderPresetValueEnumMap = {
+  r'none': ReminderLeadTimePreset.none,
+  r'minutes15': ReminderLeadTimePreset.minutes15,
+  r'hour1': ReminderLeadTimePreset.hour1,
+  r'day1': ReminderLeadTimePreset.day1,
+};
 const _TaskLocalModelstatusEnumValueMap = {
   r'pending': r'pending',
+  r'postponed': r'postponed',
   r'completed': r'completed',
+  r'overdue': r'overdue',
 };
 const _TaskLocalModelstatusValueEnumMap = {
   r'pending': TaskStatus.pending,
+  r'postponed': TaskStatus.postponed,
   r'completed': TaskStatus.completed,
+  r'overdue': TaskStatus.overdue,
 };
 
 Id _taskLocalModelGetId(TaskLocalModel object) {
@@ -810,6 +859,80 @@ extension TaskLocalModelQueryFilter
   }
 
   QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      deadlineIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'deadline',
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      deadlineIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'deadline',
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      deadlineEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'deadline',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      deadlineGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'deadline',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      deadlineLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'deadline',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      deadlineBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'deadline',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
       descriptionIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -1234,6 +1357,216 @@ extension TaskLocalModelQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'priority',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      reminderAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'reminderAt',
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      reminderAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'reminderAt',
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      reminderAtEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'reminderAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      reminderAtGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'reminderAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      reminderAtLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'reminderAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      reminderAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'reminderAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      reminderPresetEqualTo(
+    ReminderLeadTimePreset value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'reminderPreset',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      reminderPresetGreaterThan(
+    ReminderLeadTimePreset value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'reminderPreset',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      reminderPresetLessThan(
+    ReminderLeadTimePreset value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'reminderPreset',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      reminderPresetBetween(
+    ReminderLeadTimePreset lower,
+    ReminderLeadTimePreset upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'reminderPreset',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      reminderPresetStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'reminderPreset',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      reminderPresetEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'reminderPreset',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      reminderPresetContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'reminderPreset',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      reminderPresetMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'reminderPreset',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      reminderPresetIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'reminderPreset',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      reminderPresetIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'reminderPreset',
         value: '',
       ));
     });
@@ -1824,6 +2157,19 @@ extension TaskLocalModelQuerySortBy
     });
   }
 
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy> sortByDeadline() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deadline', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
+      sortByDeadlineDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deadline', Sort.desc);
+    });
+  }
+
   QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
       sortByDescription() {
     return QueryBuilder.apply(this, (query) {
@@ -1875,6 +2221,34 @@ extension TaskLocalModelQuerySortBy
       sortByPriorityDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'priority', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
+      sortByReminderAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'reminderAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
+      sortByReminderAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'reminderAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
+      sortByReminderPreset() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'reminderPreset', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
+      sortByReminderPresetDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'reminderPreset', Sort.desc);
     });
   }
 
@@ -1983,6 +2357,19 @@ extension TaskLocalModelQuerySortThenBy
     });
   }
 
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy> thenByDeadline() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deadline', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
+      thenByDeadlineDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deadline', Sort.desc);
+    });
+  }
+
   QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
       thenByDescription() {
     return QueryBuilder.apply(this, (query) {
@@ -2047,6 +2434,34 @@ extension TaskLocalModelQuerySortThenBy
       thenByPriorityDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'priority', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
+      thenByReminderAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'reminderAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
+      thenByReminderAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'reminderAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
+      thenByReminderPreset() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'reminderPreset', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
+      thenByReminderPresetDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'reminderPreset', Sort.desc);
     });
   }
 
@@ -2137,6 +2552,12 @@ extension TaskLocalModelQueryWhereDistinct
     });
   }
 
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QDistinct> distinctByDeadline() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'deadline');
+    });
+  }
+
   QueryBuilder<TaskLocalModel, TaskLocalModel, QDistinct> distinctByDescription(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -2161,6 +2582,21 @@ extension TaskLocalModelQueryWhereDistinct
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'priority', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QDistinct>
+      distinctByReminderAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'reminderAt');
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QDistinct>
+      distinctByReminderPreset({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'reminderPreset',
+          caseSensitive: caseSensitive);
     });
   }
 
@@ -2227,6 +2663,12 @@ extension TaskLocalModelQueryProperty
     });
   }
 
+  QueryBuilder<TaskLocalModel, DateTime?, QQueryOperations> deadlineProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'deadline');
+    });
+  }
+
   QueryBuilder<TaskLocalModel, String?, QQueryOperations>
       descriptionProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -2251,6 +2693,20 @@ extension TaskLocalModelQueryProperty
       priorityProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'priority');
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, DateTime?, QQueryOperations>
+      reminderAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'reminderAt');
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, ReminderLeadTimePreset, QQueryOperations>
+      reminderPresetProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'reminderPreset');
     });
   }
 

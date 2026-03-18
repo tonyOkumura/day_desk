@@ -10,6 +10,8 @@ enum TaskListMode {
 enum TaskStatusFilter {
   all(label: 'Все'),
   pending(label: 'В работе'),
+  postponed(label: 'Отложенные'),
+  overdue(label: 'Просроченные'),
   completed(label: 'Завершённые');
 
   const TaskStatusFilter({required this.label});

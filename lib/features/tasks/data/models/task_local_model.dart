@@ -1,5 +1,6 @@
 import 'package:isar/isar.dart';
 
+import '../../../../core/reminders/reminder_lead_time_preset.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/task_category.dart';
 import '../../domain/entities/task_priority.dart';
@@ -27,6 +28,13 @@ class TaskLocalModel {
 
   int? durationMinutes;
 
+  DateTime? deadline;
+
+  @Enumerated(EnumType.name)
+  ReminderLeadTimePreset reminderPreset = ReminderLeadTimePreset.none;
+
+  DateTime? reminderAt;
+
   @Enumerated(EnumType.name)
   TaskPriority priority = TaskPriority.medium;
 
@@ -50,6 +58,9 @@ class TaskLocalModel {
       date: date,
       startTime: startTime,
       durationMinutes: durationMinutes,
+      deadline: deadline,
+      reminderPreset: reminderPreset,
+      reminderAt: reminderAt,
       priority: priority,
       status: status,
       category: category,
@@ -60,19 +71,23 @@ class TaskLocalModel {
   }
 
   static TaskLocalModel fromEntity(Task task, {Id? isarId}) {
+    final Task normalizedTask = task.normalizedForPersistence();
     return TaskLocalModel()
       ..isarId = isarId ?? Isar.autoIncrement
-      ..taskId = task.id
-      ..title = task.title
-      ..description = task.description
-      ..date = task.date
-      ..startTime = task.startTime
-      ..durationMinutes = task.durationMinutes
-      ..priority = task.priority
-      ..status = task.status
-      ..category = task.category
-      ..isAllDay = task.isAllDay
-      ..createdAt = task.createdAt
-      ..updatedAt = task.updatedAt;
+      ..taskId = normalizedTask.id
+      ..title = normalizedTask.title
+      ..description = normalizedTask.description
+      ..date = normalizedTask.date
+      ..startTime = normalizedTask.startTime
+      ..durationMinutes = normalizedTask.durationMinutes
+      ..deadline = normalizedTask.deadline
+      ..reminderPreset = normalizedTask.reminderPreset
+      ..reminderAt = normalizedTask.reminderAt
+      ..priority = normalizedTask.priority
+      ..status = normalizedTask.status
+      ..category = normalizedTask.category
+      ..isAllDay = normalizedTask.isAllDay
+      ..createdAt = normalizedTask.createdAt
+      ..updatedAt = normalizedTask.updatedAt;
   }
 }

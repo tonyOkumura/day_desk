@@ -1,6 +1,7 @@
 import 'dart:ffi';
 import 'dart:io';
 
+import 'package:day_desk/core/reminders/reminder_lead_time_preset.dart';
 import 'package:day_desk/features/tasks/data/datasources/task_local_data_source.dart';
 import 'package:day_desk/features/tasks/data/models/task_local_model.dart';
 import 'package:day_desk/features/tasks/data/repositories/task_repository_impl.dart';
@@ -14,82 +15,200 @@ import 'package:isar/isar.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test(
-    'TaskRepository сохраняет CRUD, completion и reschedule сценарии',
-    () async {
-      await Isar.initializeIsarCore(
-        libraries: <Abi, String>{Abi.current(): _resolveIsarCoreLibraryPath()},
-      );
-      final Directory directory = await Directory.systemTemp.createTemp(
-        'day_desk_task_repo_test_',
-      );
-      final Isar isar = await Isar.open(
-        <CollectionSchema<dynamic>>[TaskLocalModelSchema],
-        directory: directory.path,
-        name: 'task_repo_test_${DateTime.now().microsecondsSinceEpoch}',
-        inspector: false,
-      );
-      final TaskRepositoryImpl repository = TaskRepositoryImpl(
-        TaskLocalDataSource(isar),
-      );
+  group('TaskRepository', () {
+    test(
+      'сохраняет CRUD, deadline/reminder, completion и reschedule',
+      () async {
+        final _TaskRepoTestContext context = await _openContext(
+          nowProvider: () => DateTime(2026, 3, 18, 12),
+        );
+        addTearDown(context.dispose);
 
-      final DateTime firstDay = DateTime(2026, 3, 18);
-      final DateTime secondDay = DateTime(2026, 3, 19);
-      final Task firstTask = Task(
-        id: 'task-a',
-        title: 'Подготовить интервью',
-        date: firstDay,
-        startTime: DateTime(2026, 3, 18, 10),
-        durationMinutes: 60,
+        final DateTime firstDay = DateTime(2026, 3, 18);
+        final DateTime secondDay = DateTime(2026, 3, 19);
+        final Task firstTask = Task(
+          id: 'task-a',
+          title: 'Подготовить интервью',
+          date: firstDay,
+          startTime: DateTime(2026, 3, 18, 10),
+          durationMinutes: 60,
+          deadline: DateTime(2026, 3, 18, 18),
+          reminderPreset: ReminderLeadTimePreset.hour1,
+          priority: TaskPriority.high,
+          status: TaskStatus.pending,
+          category: TaskCategory.interview,
+          createdAt: DateTime(2026, 3, 18, 9),
+          updatedAt: DateTime(2026, 3, 18, 9),
+        );
+        final Task secondTask = Task(
+          id: 'task-b',
+          title: 'Разобрать заметки',
+          date: secondDay,
+          reminderPreset: ReminderLeadTimePreset.minutes15,
+          priority: TaskPriority.medium,
+          status: TaskStatus.pending,
+          category: TaskCategory.work,
+          isAllDay: true,
+          createdAt: DateTime(2026, 3, 18, 11),
+          updatedAt: DateTime(2026, 3, 18, 11),
+        );
+
+        await context.repository.createTask(firstTask);
+        await context.repository.createTask(secondTask);
+
+        final List<Task> firstDayTasks = await context.repository
+            .getTasksByDate(firstDay);
+        expect(firstDayTasks, hasLength(1));
+        expect(firstDayTasks.single.id, 'task-a');
+        expect(firstDayTasks.single.deadline, DateTime(2026, 3, 18, 18));
+        expect(firstDayTasks.single.reminderAt, DateTime(2026, 3, 18, 17));
+
+        await context.repository.markTaskCompleted('task-a', completed: true);
+        final Task completed = (await context.repository.getAllTasks())
+            .firstWhere((Task task) => task.id == 'task-a');
+        expect(completed.status, TaskStatus.completed);
+        expect(completed.updatedAt.isAfter(firstTask.updatedAt), isTrue);
+
+        await context.repository.rescheduleTask('task-a', date: secondDay);
+        expect(await context.repository.getTasksByDate(firstDay), isEmpty);
+        final List<Task> secondDayTasks = await context.repository
+            .getTasksByDate(secondDay);
+        expect(secondDayTasks, hasLength(2));
+        final Task rescheduledTask = secondDayTasks.firstWhere(
+          (Task item) => item.id == 'task-a',
+        );
+        expect(rescheduledTask.deadline, DateTime(2026, 3, 19, 18));
+        expect(rescheduledTask.reminderAt, DateTime(2026, 3, 19, 17));
+        final Task allDayTask = secondDayTasks.firstWhere(
+          (Task item) => item.id == 'task-b',
+        );
+        expect(allDayTask.reminderAt, DateTime(2026, 3, 18, 23, 45));
+
+        await context.repository.deleteTask('task-b');
+        final List<Task> allTasks = await context.repository.getAllTasks();
+        expect(allTasks, hasLength(1));
+        expect(allTasks.single.id, 'task-a');
+      },
+    );
+
+    test('materializes overdue but keeps pending in storage', () async {
+      final _TaskRepoTestContext context = await _openContext(
+        nowProvider: () => DateTime(2026, 3, 20, 12),
+      );
+      addTearDown(context.dispose);
+
+      final Task task = Task(
+        id: 'task-overdue',
+        title: 'Отправить текст',
+        date: DateTime(2026, 3, 18),
+        deadline: DateTime(2026, 3, 19, 18),
+        reminderPreset: ReminderLeadTimePreset.hour1,
         priority: TaskPriority.high,
         status: TaskStatus.pending,
-        category: TaskCategory.interview,
-        createdAt: DateTime(2026, 3, 18, 9),
-        updatedAt: DateTime(2026, 3, 18, 9),
-      );
-      final Task secondTask = Task(
-        id: 'task-b',
-        title: 'Разобрать заметки',
-        date: secondDay,
-        priority: TaskPriority.medium,
-        status: TaskStatus.pending,
-        category: TaskCategory.work,
-        isAllDay: true,
-        createdAt: DateTime(2026, 3, 18, 11),
-        updatedAt: DateTime(2026, 3, 18, 11),
+        category: TaskCategory.publication,
+        createdAt: DateTime(2026, 3, 18, 10),
+        updatedAt: DateTime(2026, 3, 18, 10),
       );
 
-      await repository.createTask(firstTask);
-      await repository.createTask(secondTask);
+      await context.repository.createTask(task);
 
-      final List<Task> firstDayTasks = await repository.getTasksByDate(
-        firstDay,
-      );
-      expect(firstDayTasks, hasLength(1));
-      expect(firstDayTasks.single.id, 'task-a');
+      final Task loaded = (await context.repository.getAllTasks()).single;
+      expect(loaded.status, TaskStatus.overdue);
+      expect(loaded.reminderAt, DateTime(2026, 3, 19, 17));
 
-      await repository.markTaskCompleted('task-a', completed: true);
-      final Task completed = (await repository.getAllTasks()).firstWhere(
-        (Task task) => task.id == 'task-a',
-      );
-      expect(completed.status, TaskStatus.completed);
-      expect(completed.updatedAt.isAfter(firstTask.updatedAt), isTrue);
+      final TaskLocalModel stored =
+          (await context.dataSource.readAllTasks()).single;
+      expect(stored.status, TaskStatus.pending);
+      expect(stored.reminderPreset, ReminderLeadTimePreset.hour1);
+    });
 
-      await repository.rescheduleTask('task-a', date: secondDay);
-      expect(await repository.getTasksByDate(firstDay), isEmpty);
-      expect(await repository.getTasksByDate(secondDay), hasLength(2));
+    test(
+      'setTaskPostponed сохраняет ручной postponed и не auto-converts',
+      () async {
+        final _TaskRepoTestContext context = await _openContext(
+          nowProvider: () => DateTime(2026, 3, 20, 12),
+        );
+        addTearDown(context.dispose);
 
-      await repository.deleteTask('task-b');
-      final List<Task> allTasks = await repository.getAllTasks();
-      expect(allTasks, hasLength(1));
-      expect(allTasks.single.id, 'task-a');
+        final Task task = Task(
+          id: 'task-postponed',
+          title: 'Перезвонить спикеру',
+          date: DateTime(2026, 3, 18),
+          deadline: DateTime(2026, 3, 19, 9),
+          reminderPreset: ReminderLeadTimePreset.minutes15,
+          priority: TaskPriority.medium,
+          status: TaskStatus.pending,
+          category: TaskCategory.call,
+          createdAt: DateTime(2026, 3, 18, 8),
+          updatedAt: DateTime(2026, 3, 18, 8),
+        );
 
-      await isar.close(deleteFromDisk: true);
-      if (await directory.exists()) {
-        await directory.delete(recursive: true);
-      }
-    },
+        await context.repository.createTask(task);
+        await context.repository.setTaskPostponed(
+          'task-postponed',
+          postponed: true,
+        );
+
+        final Task postponed = (await context.repository.getAllTasks()).single;
+        expect(postponed.status, TaskStatus.postponed);
+        expect(postponed.reminderAt, DateTime(2026, 3, 19, 8, 45));
+
+        await context.repository.setTaskPostponed(
+          'task-postponed',
+          postponed: false,
+        );
+
+        final Task restored = (await context.repository.getAllTasks()).single;
+        expect(restored.status, TaskStatus.overdue);
+      },
+    );
+  });
+}
+
+Future<_TaskRepoTestContext> _openContext({
+  required DateTime Function() nowProvider,
+}) async {
+  await Isar.initializeIsarCore(
+    libraries: <Abi, String>{Abi.current(): _resolveIsarCoreLibraryPath()},
   );
+  final Directory directory = await Directory.systemTemp.createTemp(
+    'day_desk_task_repo_test_',
+  );
+  final Isar isar = await Isar.open(
+    <CollectionSchema<dynamic>>[TaskLocalModelSchema],
+    directory: directory.path,
+    name: 'task_repo_test_${DateTime.now().microsecondsSinceEpoch}',
+    inspector: false,
+  );
+  final TaskLocalDataSource dataSource = TaskLocalDataSource(isar);
+
+  return _TaskRepoTestContext(
+    isar: isar,
+    directory: directory,
+    dataSource: dataSource,
+    repository: TaskRepositoryImpl(dataSource, nowProvider: nowProvider),
+  );
+}
+
+class _TaskRepoTestContext {
+  const _TaskRepoTestContext({
+    required this.isar,
+    required this.directory,
+    required this.dataSource,
+    required this.repository,
+  });
+
+  final Isar isar;
+  final Directory directory;
+  final TaskLocalDataSource dataSource;
+  final TaskRepositoryImpl repository;
+
+  Future<void> dispose() async {
+    await isar.close(deleteFromDisk: true);
+    if (await directory.exists()) {
+      await directory.delete(recursive: true);
+    }
+  }
 }
 
 String _resolveIsarCoreLibraryPath() {

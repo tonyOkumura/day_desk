@@ -2,6 +2,7 @@ import 'package:day_desk/app/controllers/main_layout_controller.dart';
 import 'package:day_desk/app/controllers/theme_controller.dart';
 import 'package:day_desk/app/navigation/app_destination.dart';
 import 'package:day_desk/app/routes/app_routes.dart';
+import 'package:day_desk/core/reminders/reminder_lead_time_preset.dart';
 import 'package:day_desk/features/map/presentation/controllers/places_map_controller.dart';
 import 'package:day_desk/features/settings/domain/entities/app_settings.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_palette.dart';
@@ -228,6 +229,22 @@ void main() {
 
     expect(find.byKey(const Key('task-editor-fullscreen')), findsOneWidget);
     expect(find.byKey(const Key('task-editor-title-field')), findsOneWidget);
+    expect(
+      find.byKey(const Key('task-editor-deadline-button')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('task-editor-reminder-preset-dropdown')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('task-editor-status-dropdown')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('task-editor-reminder-preset-dropdown')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('на wide layout редактирование задачи открывается dialog', (
@@ -256,11 +273,24 @@ void main() {
 
     await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.tasks);
 
+    expect(
+      find.byKey(const Key('task-postpone-button-task-1')),
+      findsOneWidget,
+    );
+
     await tester.tap(find.byKey(const Key('task-edit-button-task-1')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('task-editor-dialog')), findsOneWidget);
     expect(find.byKey(const Key('task-editor-title-field')), findsOneWidget);
+    expect(
+      find.byKey(const Key('task-editor-deadline-button')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('task-editor-status-dropdown')),
+      findsOneWidget,
+    );
   });
 
   testWidgets(
@@ -311,6 +341,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tester.tap(
+        find.byKey(const Key('default-reminder-preset-dropdown')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('default-reminder-preset-option-day1')).last,
+      );
+      await tester.pumpAndSettle();
+
       await tester.ensureVisible(
         find.byKey(const Key('notifications-enabled-switch')),
       );
@@ -335,6 +374,7 @@ void main() {
       expect(find.text('active_palette=green'), findsOneWidget);
       expect(find.text('work_day=08:00-19:00'), findsOneWidget);
       expect(find.text('minimum_free_slot=45'), findsOneWidget);
+      expect(find.text('default_reminder=day1'), findsOneWidget);
       expect(find.text('notifications_enabled=false'), findsOneWidget);
     },
   );
@@ -547,6 +587,10 @@ void main() {
     expect(find.text('Day Desk'), findsOneWidget);
     expect(find.text('1.0.0'), findsOneWidget);
     expect(find.text('1'), findsWidgets);
+    expect(
+      find.byKey(const Key('default-reminder-preset-dropdown')),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('reset-settings-button')), findsOneWidget);
   });
 
@@ -560,6 +604,7 @@ void main() {
           workDayStartHour: 8,
           workDayEndHour: 19,
           minimumFreeSlotMinutes: 45,
+          defaultReminderPreset: ReminderLeadTimePreset.day1,
           notificationsEnabled: false,
         ),
       );
@@ -585,6 +630,7 @@ void main() {
       expect(find.text('active_palette=blue'), findsOneWidget);
       expect(find.text('work_day=09:00-18:00'), findsOneWidget);
       expect(find.text('minimum_free_slot=30'), findsOneWidget);
+      expect(find.text('default_reminder=minutes15'), findsOneWidget);
       expect(find.text('notifications_enabled=true'), findsOneWidget);
     },
   );
