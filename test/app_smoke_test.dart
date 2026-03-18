@@ -6,6 +6,9 @@ import 'package:day_desk/features/map/presentation/controllers/places_map_contro
 import 'package:day_desk/features/settings/domain/entities/app_settings.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_palette.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_preference.dart';
+import 'package:day_desk/features/tasks/domain/entities/task.dart';
+import 'package:day_desk/features/tasks/domain/entities/task_category.dart';
+import 'package:day_desk/features/tasks/domain/entities/task_status.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -115,7 +118,9 @@ void main() {
 
     expect(controller.currentDestination, AppDestination.tasks);
     expect(find.text('Задачи'), findsWidgets);
-    expect(find.text('Модуль задач'), findsOneWidget);
+    expect(find.byKey(const Key('page-app-bar-tasks')), findsOneWidget);
+    expect(find.byKey(const Key('tasks-state-empty')), findsOneWidget);
+    expect(find.text('Пока нет ни одной задачи'), findsOneWidget);
   });
 
   testWidgets(
@@ -195,7 +200,7 @@ void main() {
 
       expect(controller.currentDestination, AppDestination.tasks);
       expect(controller.currentRoutePath, AppDestination.tasks.route);
-      expect(find.text('Модуль задач'), findsOneWidget);
+      expect(find.byKey(const Key('tasks-state-empty')), findsOneWidget);
 
       await tester.drag(find.byType(PageView), const Offset(450, 0));
       await tester.pump();
@@ -206,6 +211,57 @@ void main() {
       expect(find.text('Модуль календаря'), findsOneWidget);
     },
   );
+
+  testWidgets('на compact layout новая задача открывается fullscreen editor', (
+    WidgetTester tester,
+  ) async {
+    final AppTestHarness harness = await AppTestHarness.bootstrap();
+    addTearDown(() async => harness.dispose());
+
+    AppTestHarness.setSurfaceSize(tester, size: const Size(390, 844));
+    addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+    await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.tasks);
+
+    await tester.tap(find.byKey(const Key('tasks-add-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('task-editor-fullscreen')), findsOneWidget);
+    expect(find.byKey(const Key('task-editor-title-field')), findsOneWidget);
+  });
+
+  testWidgets('на wide layout редактирование задачи открывается dialog', (
+    WidgetTester tester,
+  ) async {
+    final DateTime today = DateTime.now();
+    final AppTestHarness harness = await AppTestHarness.bootstrap(
+      taskRepository: FakeTaskRepository(
+        initialTasks: <Task>[
+          Task(
+            id: 'task-1',
+            title: 'Подготовить бриф',
+            date: DateTime(today.year, today.month, today.day),
+            status: TaskStatus.pending,
+            category: TaskCategory.work,
+            createdAt: today,
+            updatedAt: today,
+          ),
+        ],
+      ),
+    );
+    addTearDown(() async => harness.dispose());
+
+    AppTestHarness.setSurfaceSize(tester, size: const Size(1440, 960));
+    addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+    await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.tasks);
+
+    await tester.tap(find.byKey(const Key('task-edit-button-task-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('task-editor-dialog')), findsOneWidget);
+    expect(find.byKey(const Key('task-editor-title-field')), findsOneWidget);
+  });
 
   testWidgets(
     'выбранные тема, палитра и foundation-настройки сохраняются между перезапусками',

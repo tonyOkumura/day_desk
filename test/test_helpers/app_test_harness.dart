@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:day_desk/app/bindings/app_binding.dart';
 import 'package:day_desk/app/bootstrap/app_startup_state.dart';
 import 'package:day_desk/app/day_desk_app.dart';
@@ -9,18 +11,23 @@ import 'package:day_desk/features/settings/domain/entities/app_settings.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_palette.dart';
 import 'package:day_desk/features/settings/domain/entities/app_theme_preference.dart';
 import 'package:day_desk/features/settings/domain/repositories/app_settings_repository.dart';
+import 'package:day_desk/features/tasks/domain/entities/task.dart';
+import 'package:day_desk/features/tasks/domain/entities/task_status.dart';
+import 'package:day_desk/features/tasks/domain/repositories/task_repository.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 class AppTestHarness {
-  AppTestHarness._(this.repository);
+  AppTestHarness._(this.repository, this.taskRepository);
 
   final FakeAppSettingsRepository repository;
+  final FakeTaskRepository taskRepository;
 
   static Future<AppTestHarness> bootstrap({
     FakeAppSettingsRepository? repository,
+    FakeTaskRepository? taskRepository,
   }) async {
     TestWidgetsFlutterBinding.ensureInitialized();
     Get.testMode = true;
@@ -28,6 +35,8 @@ class AppTestHarness {
 
     final FakeAppSettingsRepository resolvedRepository =
         repository ?? FakeAppSettingsRepository();
+    final FakeTaskRepository resolvedTaskRepository =
+        taskRepository ?? FakeTaskRepository();
 
     if (!Get.isRegistered<AppLogger>()) {
       Get.put<AppLogger>(AppLogger(), permanent: true);
@@ -41,6 +50,7 @@ class AppTestHarness {
     }
 
     Get.put<AppSettingsRepository>(resolvedRepository, permanent: true);
+    Get.put<TaskRepository>(resolvedTaskRepository, permanent: true);
     Get.put<AppStartupState>(
       AppStartupState(initialSettings: await resolvedRepository.readSettings()),
       permanent: true,
@@ -48,7 +58,7 @@ class AppTestHarness {
 
     AppBinding().dependencies();
 
-    return AppTestHarness._(resolvedRepository);
+    return AppTestHarness._(resolvedRepository, resolvedTaskRepository);
   }
 
   static void setSurfaceSize(WidgetTester tester, {required Size size}) {
@@ -75,6 +85,7 @@ class AppTestHarness {
   }
 
   Future<void> dispose() async {
+    await taskRepository.dispose();
     Get.reset();
   }
 }
@@ -168,5 +179,140 @@ class FakeAppSettingsRepository implements AppSettingsRepository {
   @override
   Future<void> resetSettings() async {
     _settings = const AppSettings();
+  }
+}
+
+class FakeTaskRepository implements TaskRepository {
+  FakeTaskRepository({
+    List<Task>? initialTasks,
+    this.failOnLoad = false,
+    this.failOnDelete = false,
+    this.failOnUpdate = false,
+    this.failOnCreate = false,
+  }) : _tasks = List<Task>.from(initialTasks ?? const <Task>[]);
+
+  final List<Task> _tasks;
+  final bool failOnLoad;
+  final bool failOnDelete;
+  final bool failOnUpdate;
+  final bool failOnCreate;
+  final StreamController<List<Task>> _streamController =
+      StreamController<List<Task>>.broadcast();
+
+  @override
+  Future<void> createTask(Task task) async {
+    if (failOnCreate) {
+      throw StateError('create failed');
+    }
+
+    _tasks.add(task);
+    _emit();
+  }
+
+  @override
+  Future<void> updateTask(Task task) async {
+    if (failOnUpdate) {
+      throw StateError('update failed');
+    }
+
+    final int index = _tasks.indexWhere((Task item) => item.id == task.id);
+    if (index < 0) {
+      throw StateError('task not found');
+    }
+
+    _tasks[index] = task;
+    _emit();
+  }
+
+  @override
+  Future<void> deleteTask(String taskId) async {
+    if (failOnDelete) {
+      throw StateError('delete failed');
+    }
+
+    _tasks.removeWhere((Task task) => task.id == taskId);
+    _emit();
+  }
+
+  @override
+  Future<List<Task>> getTasksByDate(DateTime date) async {
+    if (failOnLoad) {
+      throw StateError('load failed');
+    }
+
+    final DateTime dayStart = DateTime(date.year, date.month, date.day);
+    final DateTime nextDay = dayStart.add(const Duration(days: 1));
+    return _tasks
+        .where((Task task) {
+          return !task.date.isBefore(dayStart) && task.date.isBefore(nextDay);
+        })
+        .toList(growable: false);
+  }
+
+  @override
+  Future<List<Task>> getAllTasks() async {
+    if (failOnLoad) {
+      throw StateError('load failed');
+    }
+
+    return List<Task>.unmodifiable(_tasks);
+  }
+
+  @override
+  Stream<List<Task>> watchTasksByDate(DateTime date) async* {
+    yield await getTasksByDate(date);
+    yield* _streamController.stream.map((List<Task> tasks) {
+      final DateTime dayStart = DateTime(date.year, date.month, date.day);
+      final DateTime nextDay = dayStart.add(const Duration(days: 1));
+      return tasks
+          .where((Task task) {
+            return !task.date.isBefore(dayStart) && task.date.isBefore(nextDay);
+          })
+          .toList(growable: false);
+    });
+  }
+
+  @override
+  Stream<List<Task>> watchAllTasks() async* {
+    yield await getAllTasks();
+    yield* _streamController.stream;
+  }
+
+  @override
+  Future<void> markTaskCompleted(
+    String taskId, {
+    required bool completed,
+  }) async {
+    final Task task = _tasks.firstWhere((Task item) => item.id == taskId);
+    await updateTask(
+      task.copyWith(
+        status: completed ? TaskStatus.completed : TaskStatus.pending,
+        updatedAt: DateTime.now(),
+      ),
+    );
+  }
+
+  @override
+  Future<void> rescheduleTask(
+    String taskId, {
+    required DateTime date,
+    DateTime? startTime,
+  }) async {
+    final Task task = _tasks.firstWhere((Task item) => item.id == taskId);
+    await updateTask(
+      task.copyWith(
+        date: DateTime(date.year, date.month, date.day),
+        startTime: startTime,
+        updatedAt: DateTime.now(),
+      ),
+    );
+  }
+
+  Future<void> dispose() async {
+    await _streamController.close();
+  }
+
+  void _emit() {
+    _streamController.add(List<Task>.unmodifiable(_tasks));
   }
 }

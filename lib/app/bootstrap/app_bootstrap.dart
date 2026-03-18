@@ -19,6 +19,10 @@ import '../../features/settings/data/models/app_settings_local_model.dart';
 import '../../features/settings/data/repositories/app_settings_repository_impl.dart';
 import '../../features/settings/domain/entities/app_settings.dart';
 import '../../features/settings/domain/repositories/app_settings_repository.dart';
+import '../../features/tasks/data/datasources/task_local_data_source.dart';
+import '../../features/tasks/data/models/task_local_model.dart';
+import '../../features/tasks/data/repositories/task_repository_impl.dart';
+import '../../features/tasks/domain/repositories/task_repository.dart';
 import '../bindings/app_binding.dart';
 import '../day_desk_app.dart';
 import 'app_launch_branding.dart';
@@ -71,7 +75,10 @@ class AppBootstrap {
 
     final AppDatabase database = AppDatabase(logger: logger);
     await database.open(
-      schemas: <CollectionSchema<dynamic>>[AppSettingsLocalModelSchema],
+      schemas: <CollectionSchema<dynamic>>[
+        AppSettingsLocalModelSchema,
+        TaskLocalModelSchema,
+      ],
       directoryPath: resolvedDirectoryPath,
       name: 'day_desk',
     );
@@ -83,6 +90,14 @@ class AppBootstrap {
       localDataSource,
     );
     Get.put<AppSettingsRepository>(settingsRepository, permanent: true);
+
+    final TaskLocalDataSource taskLocalDataSource = TaskLocalDataSource(
+      database.isar,
+    );
+    final TaskRepository taskRepository = TaskRepositoryImpl(
+      taskLocalDataSource,
+    );
+    Get.put<TaskRepository>(taskRepository, permanent: true);
 
     final AppSettings initialSettings = await settingsRepository.readSettings();
     final AppInfoService appInfoService = await AppInfoService.load(

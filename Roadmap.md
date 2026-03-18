@@ -1,8 +1,8 @@
 # Roadmap проекта
 
-**Актуально на:** 17 марта 2026
+**Актуально на:** 18 марта 2026
 
-**Текущее состояние roadmap:** Sprint 0 закрыт как foundation-этап. В коде уже есть архитектурный каркас, shell/navigation, theme/palette system, settings storage, logging/errors, custom in-app notifications, desktop polish, locale/date-time foundation и стартовый scaffold карты Москвы. Бизнес-модули `Task` и `Event` еще не начаты.
+**Текущее состояние roadmap:** Sprint 0 и Sprint 1 закрыты. В коде уже есть архитектурный каркас, shell/navigation, theme/palette system, settings storage, logging/errors, custom in-app notifications, desktop polish, locale/date-time foundation, стартовый scaffold карты Москвы, system/settings polish и полноценный `Task Core` с локальным хранением на `Isar`. Следующий целевой этап — Sprint 2 с модулем событий.
 
 ## Общая последовательность
 
@@ -85,13 +85,17 @@
 
 - feature-first каркас `app / core / features`;
 - bootstrap приложения, app-scoped DI и routing на `GetX`;
-- `MainLayout` с `SidebarX`, `GNav`, `PageView` и placeholder-экранами основных разделов;
+- `MainLayout` с `SidebarX`, `GNav`, `PageView` и shell-разделами основных модулей;
 - theme system: `system / light / dark` + palette;
 - foundation-настройки с локальным хранением на `Isar`;
 - app-level logging, базовая обработка ошибок и custom in-app overlay-уведомления;
 - `intl`, фиксированная локаль `ru_RU` и единый formatter для даты и времени;
 - desktop polish: shortcuts/intents, focus traversal, safe narrow desktop behavior;
-- базовые unit/widget tests для foundation-слоя.
+- стартовый `/map` с `flutter_map`, tile-provider abstraction и `loading` / `fallback` состояниями;
+- core UI kit для кнопок, dropdown, section cards и общих empty/loading/error/confirm состояний;
+- секция “О приложении”, runtime version/build metadata и безопасный `reset settings`;
+- production app identifiers, launch/splash branding foundation и platform metadata;
+- базовые unit/widget/repository tests для foundation-слоя.
 
 ### Результат спринта
 
@@ -104,7 +108,7 @@
 
 Карта уже получила ранний scaffold в коде, а на этом этапе фиксируется дальнейшее архитектурное направление:
 
-- будущий map-модуль будет отдельной feature;
+- map-модуль уже выделен в отдельную feature;
 - route `/map` уже существует в shell;
 - foundation для картографии: `flutter_map`;
 - текущий стартовый экран открывается на Москве и пока не зависит от `Event`/`Task`;
@@ -117,11 +121,13 @@
 
 ## Sprint 1 — Модуль задач (Task Core)
 
+**Статус:** реализован
+
 ### Цель
 
 Реализовать первую полноценную бизнес-сущность — задачи.
 
-### Что делаем
+### Что было запланировано
 
 - создаем domain/entity/model для `Task`;
 - создаем repository interface и local repository implementation;
@@ -152,6 +158,50 @@
 
 Покрываем критичную логику базовыми тестами.
 
+### Что фактически реализовано
+
+- добавлена доменная сущность `Task` и Sprint 1 contract:
+  - `id`
+  - `title`
+  - `description?`
+  - `date`
+  - `startTime?`
+  - `durationMinutes?`
+  - `priority`
+  - `status`
+  - `category`
+  - `isAllDay`
+  - `createdAt`
+  - `updatedAt`
+- зафиксированы enum-ы:
+  - `TaskPriority`: `low`, `medium`, `high`
+  - `TaskStatus`: `pending`, `completed`
+  - `TaskCategory`: `work`, `personal`, `interview`, `publication`, `call`, `other`
+- добавлены `TaskRepository`, local data source и `Isar`-модель хранения задач;
+- задачи теперь переживают перезапуск приложения и хранятся локально на той же storage-инфраструктуре;
+- вкладка `/tasks` больше не placeholder:
+  - есть режим `На дату / Все`;
+  - есть выбор даты для режима `На дату`;
+  - есть базовый фильтр по статусу и простая сортировка;
+  - есть `empty`, `loading`, `error` состояния;
+- реализованы действия:
+  - `create task`
+  - `update task`
+  - `delete task`
+  - `get tasks by date`
+  - `get all tasks`
+  - `mark task completed`
+  - `reschedule task`
+- editor задачи работает в двух режимах:
+  - desktop/wide — модальный dialog;
+  - compact/mobile — fullscreen editor route;
+- реализована валидация формы:
+  - `title` обязателен;
+  - `date` обязателен;
+  - `isAllDay` очищает время и длительность;
+  - `durationMinutes` используется только вместе с `startTime`;
+- критичная логика покрыта unit/widget/repository тестами.
+
 ### Результат спринта
 
 Пользователь уже может:
@@ -161,6 +211,14 @@
 - удалять задачи;
 - отмечать выполненными;
 - видеть список задач.
+- быстро переносить задачи на другую дату.
+
+### Что осталось за рамками Sprint 1
+
+- `deadline` и `reminderAt`;
+- статусы `overdue` и `postponed`;
+- расширенные фильтры по категории и приоритету;
+- интеграция задач с картой через location-contract.
 
 ### Это важнее всего после Sprint 0
 

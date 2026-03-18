@@ -14,7 +14,7 @@ class AppDropdownField<T> extends StatelessWidget {
   });
 
   final String label;
-  final T value;
+  final T? value;
   final List<DropdownMenuItem<T>> items;
   final ValueChanged<T?> onChanged;
   final Key? fieldKey;
