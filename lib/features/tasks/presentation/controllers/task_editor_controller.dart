@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import '../../../../core/date/app_date_formatter.dart';
@@ -8,7 +9,8 @@ import '../../../../core/notifications/app_notification_service.dart';
 import '../../../../core/reminders/reminder_lead_time_preset.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/task_category.dart';
-import '../../domain/entities/task_priority.dart';
+import '../../domain/entities/task_checklist_item.dart';
+import '../../domain/entities/task_quadrant.dart';
 import '../../domain/entities/task_status.dart';
 import '../../domain/repositories/task_repository.dart';
 
@@ -28,7 +30,6 @@ class TaskEditorController {
        _notificationService = notificationService,
        _persistedTask = initialTask,
        _title = (initialTask?.title ?? '').obs,
-       _description = (initialTask?.description ?? '').obs,
        _date = dateFormatter
            .startOfDay(initialTask?.date ?? initialDate ?? DateTime.now())
            .obs,
@@ -37,7 +38,8 @@ class TaskEditorController {
        _deadline = Rxn<DateTime>(initialTask?.deadline),
        _reminderPreset =
            (initialTask?.reminderPreset ?? defaultReminderPreset).obs,
-       _priority = (initialTask?.priority ?? TaskPriority.medium).obs,
+       _quadrant = (initialTask?.quadrant ?? TaskQuadrant.schedule).obs,
+       _subtasks = <TaskChecklistItem>[...?initialTask?.subtasks].obs,
        _category = (initialTask?.category ?? TaskCategory.other).obs,
        _isAllDay = (initialTask?.isAllDay ?? false).obs,
        _status = (_normalizeEditorStatus(initialTask?.status)).obs,
@@ -53,13 +55,13 @@ class TaskEditorController {
   final AppNotificationService _notificationService;
 
   final RxString _title;
-  final RxString _description;
   final Rx<DateTime> _date;
   final Rxn<DateTime> _startTime;
   final RxnInt _durationMinutes;
   final Rxn<DateTime> _deadline;
   final Rx<ReminderLeadTimePreset> _reminderPreset;
-  final Rx<TaskPriority> _priority;
+  final Rx<TaskQuadrant> _quadrant;
+  final RxList<TaskChecklistItem> _subtasks;
   final Rx<TaskCategory> _category;
   final RxBool _isAllDay;
   final Rx<TaskStatus> _status;
@@ -75,14 +77,14 @@ class TaskEditorController {
   bool get canEditDuration => !isAllDay && _startTime.value != null;
   bool get hasUnsavedChanges => _snapshot != _initialSnapshot;
   String get title => _title.value;
-  String get description => _description.value;
   DateTime get date => _date.value;
   DateTime? get startTime => _startTime.value;
   int? get durationMinutes => _durationMinutes.value;
   DateTime? get deadline => _deadline.value;
   ReminderLeadTimePreset get reminderPreset => _reminderPreset.value;
   DateTime? get resolvedReminderAt => _draftReminderAt();
-  TaskPriority get priority => _priority.value;
+  TaskQuadrant get quadrant => _quadrant.value;
+  List<TaskChecklistItem> get subtasks => _sortedSubtasks(_subtasks);
   TaskCategory get category => _category.value;
   TaskStatus get status => _status.value;
   String? get titleError => _titleError.value;
@@ -98,6 +100,11 @@ class TaskEditorController {
   List<TaskStatus> get editableStatuses => TaskStatus.editorValues;
   List<ReminderLeadTimePreset> get reminderPresetOptions =>
       ReminderLeadTimePreset.values;
+  List<TaskQuadrant> get quadrantOptions =>
+      TaskQuadrant.values.toList(growable: false)..sort(
+        (TaskQuadrant left, TaskQuadrant right) =>
+            left.sortOrder.compareTo(right.sortOrder),
+      );
   String? get reminderHelperText {
     if (!reminderPreset.hasReminder) {
       return null;
@@ -118,10 +125,6 @@ class TaskEditorController {
     }
   }
 
-  void updateDescription(String value) {
-    _description.value = value;
-  }
-
   void updateDate(DateTime value) {
     final DateTime normalizedDate = _dateFormatter.startOfDay(value);
     _date.value = normalizedDate;
@@ -136,6 +139,17 @@ class TaskEditorController {
         currentStartTime.minute,
       );
     }
+
+    final DateTime? currentDeadline = _deadline.value;
+    if (currentDeadline != null) {
+      _deadline.value = DateTime(
+        normalizedDate.year,
+        normalizedDate.month,
+        normalizedDate.day,
+        currentDeadline.hour,
+        currentDeadline.minute,
+      );
+    }
   }
 
   void updateDeadline(DateTime? value) {
@@ -144,6 +158,70 @@ class TaskEditorController {
 
   void updateReminderPreset(ReminderLeadTimePreset value) {
     _reminderPreset.value = value;
+  }
+
+  void updateQuadrant(TaskQuadrant value) {
+    _quadrant.value = value;
+  }
+
+  void addSubtask([String initialTitle = '']) {
+    final List<TaskChecklistItem> nextItems = subtasks.toList(growable: true)
+      ..add(
+        TaskChecklistItem(
+          id: _generateId(),
+          title: initialTitle,
+          sortOrder: subtasks.length,
+        ),
+      );
+    _subtasks.assignAll(nextItems);
+  }
+
+  void updateSubtaskTitle(String id, String value) {
+    _subtasks.assignAll(
+      subtasks.map((TaskChecklistItem item) {
+        if (item.id != id) {
+          return item;
+        }
+
+        return item.copyWith(title: value);
+      }),
+    );
+  }
+
+  void toggleSubtaskCompletion(String id, bool completed) {
+    _subtasks.assignAll(
+      subtasks.map((TaskChecklistItem item) {
+        if (item.id != id) {
+          return item;
+        }
+
+        return item.copyWith(isCompleted: completed);
+      }),
+    );
+  }
+
+  void removeSubtask(String id) {
+    final List<TaskChecklistItem> nextItems = subtasks
+        .where((TaskChecklistItem item) => item.id != id)
+        .toList(growable: false);
+    _subtasks.assignAll(_reindexSubtasks(nextItems));
+  }
+
+  void reorderSubtasks(int oldIndex, int newIndex) {
+    final List<TaskChecklistItem> nextItems = subtasks.toList(growable: true);
+    if (oldIndex < 0 ||
+        oldIndex >= nextItems.length ||
+        newIndex < 0 ||
+        newIndex > nextItems.length) {
+      return;
+    }
+
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+    final TaskChecklistItem moved = nextItems.removeAt(oldIndex);
+    nextItems.insert(newIndex, moved);
+    _subtasks.assignAll(_reindexSubtasks(nextItems));
   }
 
   void setAllDay(bool value) {
@@ -180,10 +258,6 @@ class TaskEditorController {
     _durationMinutes.value = value;
   }
 
-  void updatePriority(TaskPriority value) {
-    _priority.value = value;
-  }
-
   void updateCategory(TaskCategory value) {
     _category.value = value;
   }
@@ -207,7 +281,6 @@ class TaskEditorController {
     final DateTime now = DateTime.now();
     final Task task = _buildDraftTask(
       title: trimmedTitle,
-      description: _description.value.trim(),
       updatedAt: now,
       createdAt: _persistedTask?.createdAt ?? now,
     );
@@ -246,7 +319,7 @@ class TaskEditorController {
     }
   }
 
-  String _generateTaskId() {
+  String _generateId() {
     return '${DateTime.now().microsecondsSinceEpoch.toRadixString(16)}-'
         '${Random().nextInt(1 << 32).toRadixString(16)}';
   }
@@ -254,13 +327,13 @@ class TaskEditorController {
   _TaskEditorSnapshot get _snapshot {
     return _TaskEditorSnapshot(
       title: _title.value.trim(),
-      description: _description.value.trim(),
       date: _dateFormatter.startOfDay(_date.value),
       startTime: _startTime.value,
       durationMinutes: _durationMinutes.value,
       deadline: _deadline.value,
       reminderPreset: _reminderPreset.value,
-      priority: _priority.value,
+      quadrant: _quadrant.value,
+      subtasks: subtasks,
       category: _category.value,
       isAllDay: _isAllDay.value,
       status: _status.value,
@@ -269,24 +342,23 @@ class TaskEditorController {
 
   Task _buildDraftTask({
     String? title,
-    String? description,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     final String resolvedTitle = title ?? _title.value.trim();
-    final String resolvedDescription = description ?? _description.value.trim();
 
     return Task(
-      id: _persistedTask?.id ?? _generateTaskId(),
+      id: _persistedTask?.id ?? _generateId(),
       title: resolvedTitle,
-      description: resolvedDescription.isEmpty ? null : resolvedDescription,
       date: _dateFormatter.startOfDay(_date.value),
       startTime: _isAllDay.value ? null : _startTime.value,
       durationMinutes: _isAllDay.value ? null : _durationMinutes.value,
       deadline: _deadline.value,
       reminderPreset: _reminderPreset.value,
       reminderAt: _draftReminderAt(),
-      priority: _priority.value,
+      isUrgent: _quadrant.value.isUrgent,
+      isImportant: _quadrant.value.isImportant,
+      subtasks: subtasks,
       status: _status.value,
       category: _category.value,
       isAllDay: _isAllDay.value,
@@ -321,31 +393,52 @@ class TaskEditorController {
 
     return status;
   }
+
+  static List<TaskChecklistItem> _sortedSubtasks(
+    List<TaskChecklistItem> items,
+  ) {
+    final List<TaskChecklistItem> sorted = List<TaskChecklistItem>.from(items)
+      ..sort(
+        (TaskChecklistItem left, TaskChecklistItem right) =>
+            left.sortOrder.compareTo(right.sortOrder),
+      );
+    return List<TaskChecklistItem>.unmodifiable(sorted);
+  }
+
+  static List<TaskChecklistItem> _reindexSubtasks(
+    List<TaskChecklistItem> items,
+  ) {
+    return List<TaskChecklistItem>.unmodifiable(
+      items.asMap().entries.map((MapEntry<int, TaskChecklistItem> entry) {
+        return entry.value.copyWith(sortOrder: entry.key);
+      }),
+    );
+  }
 }
 
 class _TaskEditorSnapshot {
   const _TaskEditorSnapshot({
     required this.title,
-    required this.description,
     required this.date,
     required this.startTime,
     required this.durationMinutes,
     required this.deadline,
     required this.reminderPreset,
-    required this.priority,
+    required this.quadrant,
+    required this.subtasks,
     required this.category,
     required this.isAllDay,
     required this.status,
   });
 
   final String title;
-  final String description;
   final DateTime date;
   final DateTime? startTime;
   final int? durationMinutes;
   final DateTime? deadline;
   final ReminderLeadTimePreset reminderPreset;
-  final TaskPriority priority;
+  final TaskQuadrant quadrant;
+  final List<TaskChecklistItem> subtasks;
   final TaskCategory category;
   final bool isAllDay;
   final TaskStatus status;
@@ -355,34 +448,33 @@ class _TaskEditorSnapshot {
     if (identical(this, other)) {
       return true;
     }
+
     return other is _TaskEditorSnapshot &&
         other.title == title &&
-        other.description == description &&
         other.date == date &&
         other.startTime == startTime &&
         other.durationMinutes == durationMinutes &&
         other.deadline == deadline &&
         other.reminderPreset == reminderPreset &&
-        other.priority == priority &&
+        other.quadrant == quadrant &&
+        listEquals(other.subtasks, subtasks) &&
         other.category == category &&
         other.isAllDay == isAllDay &&
         other.status == status;
   }
 
   @override
-  int get hashCode {
-    return Object.hash(
-      title,
-      description,
-      date,
-      startTime,
-      durationMinutes,
-      deadline,
-      reminderPreset,
-      priority,
-      category,
-      isAllDay,
-      status,
-    );
-  }
+  int get hashCode => Object.hash(
+    title,
+    date,
+    startTime,
+    durationMinutes,
+    deadline,
+    reminderPreset,
+    quadrant,
+    Object.hashAll(subtasks),
+    category,
+    isAllDay,
+    status,
+  );
 }

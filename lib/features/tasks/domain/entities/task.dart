@@ -1,6 +1,7 @@
 import '../../../../core/reminders/reminder_lead_time_preset.dart';
 import 'task_category.dart';
-import 'task_priority.dart';
+import 'task_checklist_item.dart';
+import 'task_quadrant.dart';
 import 'task_status.dart';
 
 const Object _taskUnset = Object();
@@ -9,14 +10,15 @@ class Task {
   Task({
     required this.id,
     required this.title,
-    this.description,
     required this.date,
     this.startTime,
     this.durationMinutes,
     this.deadline,
     this.reminderPreset = ReminderLeadTimePreset.none,
     this.reminderAt,
-    this.priority = TaskPriority.medium,
+    this.isUrgent = false,
+    this.isImportant = true,
+    List<TaskChecklistItem> subtasks = const <TaskChecklistItem>[],
     this.status = TaskStatus.pending,
     this.category = TaskCategory.other,
     this.isAllDay = false,
@@ -26,6 +28,7 @@ class Task {
          !isAllDay || (startTime == null && durationMinutes == null),
          'All-day tasks cannot have start time or duration.',
        ),
+       subtasks = List<TaskChecklistItem>.unmodifiable(subtasks),
        assert(
          deadline == null ||
              reminderAt == null ||
@@ -35,14 +38,15 @@ class Task {
 
   final String id;
   final String title;
-  final String? description;
   final DateTime date;
   final DateTime? startTime;
   final int? durationMinutes;
   final DateTime? deadline;
   final ReminderLeadTimePreset reminderPreset;
   final DateTime? reminderAt;
-  final TaskPriority priority;
+  final bool isUrgent;
+  final bool isImportant;
+  final List<TaskChecklistItem> subtasks;
   final TaskStatus status;
   final TaskCategory category;
   final bool isAllDay;
@@ -53,6 +57,11 @@ class Task {
   bool get isPostponed => status == TaskStatus.postponed;
   bool get isOverdue => status == TaskStatus.overdue;
   bool get hasReminderPreset => reminderPreset.hasReminder;
+  TaskQuadrant get quadrant =>
+      TaskQuadrant.fromFlags(isUrgent: isUrgent, isImportant: isImportant);
+  int get totalSubtaskCount => subtasks.length;
+  int get completedSubtaskCount =>
+      subtasks.where((TaskChecklistItem item) => item.isCompleted).length;
 
   DateTime? get endTime {
     final DateTime? start = startTime;
@@ -134,25 +143,35 @@ class Task {
         ? TaskStatus.pending
         : status;
     final DateTime? normalizedReminderAt = resolvedReminderAt;
+    final List<TaskChecklistItem> normalizedSubtasks = _normalizeSubtasks(
+      subtasks,
+    );
 
-    if (normalizedStatus == status && normalizedReminderAt == reminderAt) {
+    if (normalizedStatus == status &&
+        normalizedReminderAt == reminderAt &&
+        _subtasksEqual(normalizedSubtasks, subtasks)) {
       return this;
     }
 
-    return copyWith(status: normalizedStatus, reminderAt: normalizedReminderAt);
+    return copyWith(
+      status: normalizedStatus,
+      reminderAt: normalizedReminderAt,
+      subtasks: normalizedSubtasks,
+    );
   }
 
   Task copyWith({
     String? id,
     String? title,
-    Object? description = _taskUnset,
     DateTime? date,
     Object? startTime = _taskUnset,
     Object? durationMinutes = _taskUnset,
     Object? deadline = _taskUnset,
     ReminderLeadTimePreset? reminderPreset,
     Object? reminderAt = _taskUnset,
-    TaskPriority? priority,
+    bool? isUrgent,
+    bool? isImportant,
+    Object? subtasks = _taskUnset,
     TaskStatus? status,
     TaskCategory? category,
     bool? isAllDay,
@@ -162,9 +181,6 @@ class Task {
     return Task(
       id: id ?? this.id,
       title: title ?? this.title,
-      description: identical(description, _taskUnset)
-          ? this.description
-          : description as String?,
       date: date ?? this.date,
       startTime: identical(startTime, _taskUnset)
           ? this.startTime
@@ -179,12 +195,58 @@ class Task {
       reminderAt: identical(reminderAt, _taskUnset)
           ? this.reminderAt
           : reminderAt as DateTime?,
-      priority: priority ?? this.priority,
+      isUrgent: isUrgent ?? this.isUrgent,
+      isImportant: isImportant ?? this.isImportant,
+      subtasks: identical(subtasks, _taskUnset)
+          ? this.subtasks
+          : List<TaskChecklistItem>.unmodifiable(
+              subtasks as List<TaskChecklistItem>,
+            ),
       status: status ?? this.status,
       category: category ?? this.category,
       isAllDay: isAllDay ?? this.isAllDay,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
+  }
+
+  static List<TaskChecklistItem> _normalizeSubtasks(
+    List<TaskChecklistItem> items,
+  ) {
+    final List<TaskChecklistItem> normalized =
+        items
+            .map(
+              (TaskChecklistItem item) =>
+                  item.copyWith(title: item.normalizedTitle),
+            )
+            .where((TaskChecklistItem item) => item.hasContent)
+            .toList(growable: false)
+          ..sort(
+            (TaskChecklistItem left, TaskChecklistItem right) =>
+                left.sortOrder.compareTo(right.sortOrder),
+          );
+
+    return List<TaskChecklistItem>.unmodifiable(
+      normalized.asMap().entries.map((MapEntry<int, TaskChecklistItem> entry) {
+        return entry.value.copyWith(sortOrder: entry.key);
+      }),
+    );
+  }
+
+  static bool _subtasksEqual(
+    List<TaskChecklistItem> left,
+    List<TaskChecklistItem> right,
+  ) {
+    if (left.length != right.length) {
+      return false;
+    }
+
+    for (int index = 0; index < left.length; index += 1) {
+      if (left[index] != right[index]) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }

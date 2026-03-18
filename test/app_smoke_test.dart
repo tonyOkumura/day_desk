@@ -9,6 +9,7 @@ import 'package:day_desk/features/settings/domain/entities/app_theme_palette.dar
 import 'package:day_desk/features/settings/domain/entities/app_theme_preference.dart';
 import 'package:day_desk/features/tasks/domain/entities/task.dart';
 import 'package:day_desk/features/tasks/domain/entities/task_category.dart';
+import 'package:day_desk/features/tasks/domain/entities/task_quadrant.dart';
 import 'package:day_desk/features/tasks/domain/entities/task_status.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -121,7 +122,8 @@ void main() {
     expect(find.text('Задачи'), findsWidgets);
     expect(find.byKey(const Key('page-app-bar-tasks')), findsOneWidget);
     expect(find.byKey(const Key('tasks-state-empty')), findsOneWidget);
-    expect(find.text('Пока нет ни одной задачи'), findsOneWidget);
+    expect(find.text('Матрица пока пустая'), findsOneWidget);
+    expect(find.byKey(const Key('task-quick-capture-field')), findsOneWidget);
   });
 
   testWidgets(
@@ -224,11 +226,20 @@ void main() {
 
     await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.tasks);
 
+    await tester.ensureVisible(find.byKey(const Key('tasks-add-button')));
     await tester.tap(find.byKey(const Key('tasks-add-button')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('task-editor-fullscreen')), findsOneWidget);
     expect(find.byKey(const Key('task-editor-title-field')), findsOneWidget);
+    expect(
+      find.byKey(const Key('task-editor-quadrant-selector')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('task-editor-add-subtask-button')),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const Key('task-editor-deadline-button')),
       findsOneWidget,
@@ -258,6 +269,8 @@ void main() {
             id: 'task-1',
             title: 'Подготовить бриф',
             date: DateTime(today.year, today.month, today.day),
+            isUrgent: TaskQuadrant.doNow.isUrgent,
+            isImportant: TaskQuadrant.doNow.isImportant,
             status: TaskStatus.pending,
             category: TaskCategory.work,
             createdAt: today,
@@ -278,11 +291,18 @@ void main() {
       findsOneWidget,
     );
 
+    await tester.ensureVisible(
+      find.byKey(const Key('task-edit-button-task-1')),
+    );
     await tester.tap(find.byKey(const Key('task-edit-button-task-1')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('task-editor-dialog')), findsOneWidget);
     expect(find.byKey(const Key('task-editor-title-field')), findsOneWidget);
+    expect(
+      find.byKey(const Key('task-editor-quadrant-selector')),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const Key('task-editor-deadline-button')),
       findsOneWidget,

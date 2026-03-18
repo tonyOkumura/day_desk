@@ -7,7 +7,8 @@ import 'package:day_desk/features/tasks/data/models/task_local_model.dart';
 import 'package:day_desk/features/tasks/data/repositories/task_repository_impl.dart';
 import 'package:day_desk/features/tasks/domain/entities/task.dart';
 import 'package:day_desk/features/tasks/domain/entities/task_category.dart';
-import 'package:day_desk/features/tasks/domain/entities/task_priority.dart';
+import 'package:day_desk/features/tasks/domain/entities/task_checklist_item.dart';
+import 'package:day_desk/features/tasks/domain/entities/task_quadrant.dart';
 import 'package:day_desk/features/tasks/domain/entities/task_status.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
@@ -17,7 +18,7 @@ void main() {
 
   group('TaskRepository', () {
     test(
-      'сохраняет CRUD, deadline/reminder, completion и reschedule',
+      'сохраняет CRUD, квадрант, checklist, deadline/reminder, completion и reschedule',
       () async {
         final _TaskRepoTestContext context = await _openContext(
           nowProvider: () => DateTime(2026, 3, 18, 12),
@@ -28,15 +29,28 @@ void main() {
         final DateTime secondDay = DateTime(2026, 3, 19);
         final Task firstTask = Task(
           id: 'task-a',
-          title: 'Подготовить интервью',
+          title: 'Сходить в магазин',
           date: firstDay,
           startTime: DateTime(2026, 3, 18, 10),
           durationMinutes: 60,
           deadline: DateTime(2026, 3, 18, 18),
           reminderPreset: ReminderLeadTimePreset.hour1,
-          priority: TaskPriority.high,
+          isUrgent: true,
+          isImportant: true,
+          subtasks: const <TaskChecklistItem>[
+            TaskChecklistItem(
+              id: 'item-milk',
+              title: 'Купить молоко',
+              sortOrder: 0,
+            ),
+            TaskChecklistItem(
+              id: 'item-bread',
+              title: 'Купить хлеб',
+              sortOrder: 1,
+            ),
+          ],
           status: TaskStatus.pending,
-          category: TaskCategory.interview,
+          category: TaskCategory.personal,
           createdAt: DateTime(2026, 3, 18, 9),
           updatedAt: DateTime(2026, 3, 18, 9),
         );
@@ -45,7 +59,8 @@ void main() {
           title: 'Разобрать заметки',
           date: secondDay,
           reminderPreset: ReminderLeadTimePreset.minutes15,
-          priority: TaskPriority.medium,
+          isUrgent: false,
+          isImportant: true,
           status: TaskStatus.pending,
           category: TaskCategory.work,
           isAllDay: true,
@@ -60,8 +75,29 @@ void main() {
             .getTasksByDate(firstDay);
         expect(firstDayTasks, hasLength(1));
         expect(firstDayTasks.single.id, 'task-a');
+        expect(firstDayTasks.single.quadrant, TaskQuadrant.doNow);
         expect(firstDayTasks.single.deadline, DateTime(2026, 3, 18, 18));
         expect(firstDayTasks.single.reminderAt, DateTime(2026, 3, 18, 17));
+        expect(firstDayTasks.single.totalSubtaskCount, 2);
+
+        await context.repository.toggleSubtaskCompleted(
+          'task-a',
+          'item-milk',
+          completed: true,
+        );
+        final Task afterChecklistToggle =
+            (await context.repository.getAllTasks()).firstWhere(
+              (Task task) => task.id == 'task-a',
+            );
+        expect(afterChecklistToggle.completedSubtaskCount, 1);
+
+        await context.repository.updateTaskQuadrant(
+          'task-a',
+          quadrant: TaskQuadrant.later,
+        );
+        final Task reclassified = (await context.repository.getAllTasks())
+            .firstWhere((Task task) => task.id == 'task-a');
+        expect(reclassified.quadrant, TaskQuadrant.later);
 
         await context.repository.markTaskCompleted('task-a', completed: true);
         final Task completed = (await context.repository.getAllTasks())
@@ -103,7 +139,8 @@ void main() {
         date: DateTime(2026, 3, 18),
         deadline: DateTime(2026, 3, 19, 18),
         reminderPreset: ReminderLeadTimePreset.hour1,
-        priority: TaskPriority.high,
+        isUrgent: false,
+        isImportant: true,
         status: TaskStatus.pending,
         category: TaskCategory.publication,
         createdAt: DateTime(2026, 3, 18, 10),
@@ -136,7 +173,6 @@ void main() {
           date: DateTime(2026, 3, 18),
           deadline: DateTime(2026, 3, 19, 9),
           reminderPreset: ReminderLeadTimePreset.minutes15,
-          priority: TaskPriority.medium,
           status: TaskStatus.pending,
           category: TaskCategory.call,
           createdAt: DateTime(2026, 3, 18, 8),

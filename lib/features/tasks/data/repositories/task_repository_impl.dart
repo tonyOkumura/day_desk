@@ -1,4 +1,6 @@
 import '../../domain/entities/task.dart';
+import '../../domain/entities/task_checklist_item.dart';
+import '../../domain/entities/task_quadrant.dart';
 import '../../domain/entities/task_status.dart';
 import '../../domain/repositories/task_repository.dart';
 import '../datasources/task_local_data_source.dart';
@@ -104,6 +106,44 @@ class TaskRepositoryImpl implements TaskRepository {
         status: postponed ? TaskStatus.postponed : TaskStatus.pending,
         updatedAt: _nowProvider(),
       ),
+    );
+  }
+
+  @override
+  Future<void> updateTaskQuadrant(
+    String taskId, {
+    required TaskQuadrant quadrant,
+  }) async {
+    final Task existing = await _requireStoredTask(taskId);
+
+    await updateTask(
+      existing.copyWith(
+        isUrgent: quadrant.isUrgent,
+        isImportant: quadrant.isImportant,
+        updatedAt: _nowProvider(),
+      ),
+    );
+  }
+
+  @override
+  Future<void> toggleSubtaskCompleted(
+    String taskId,
+    String subtaskId, {
+    required bool completed,
+  }) async {
+    final Task existing = await _requireStoredTask(taskId);
+    final List<TaskChecklistItem> nextSubtasks = existing.subtasks
+        .map((TaskChecklistItem item) {
+          if (item.id != subtaskId) {
+            return item;
+          }
+
+          return item.copyWith(isCompleted: completed);
+        })
+        .toList(growable: false);
+
+    await updateTask(
+      existing.copyWith(subtasks: nextSubtasks, updatedAt: _nowProvider()),
     );
   }
 

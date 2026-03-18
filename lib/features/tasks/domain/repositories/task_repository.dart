@@ -1,4 +1,5 @@
 import '../entities/task.dart';
+import '../entities/task_quadrant.dart';
 
 abstract interface class TaskRepository {
   Future<void> createTask(Task task);
@@ -18,6 +19,17 @@ abstract interface class TaskRepository {
   Future<void> markTaskCompleted(String taskId, {required bool completed});
 
   Future<void> setTaskPostponed(String taskId, {required bool postponed});
+
+  Future<void> updateTaskQuadrant(
+    String taskId, {
+    required TaskQuadrant quadrant,
+  });
+
+  Future<void> toggleSubtaskCompleted(
+    String taskId,
+    String subtaskId, {
+    required bool completed,
+  });
 
   Future<void> rescheduleTask(
     String taskId, {

@@ -1,13 +1,25 @@
-enum TaskListMode {
+import '../../domain/entities/task_category.dart';
+
+enum TaskViewMode {
+  matrix(label: 'Матрица'),
+  list(label: 'Список');
+
+  const TaskViewMode({required this.label});
+
+  final String label;
+}
+
+enum TaskScopeMode {
   forDay(label: 'На дату'),
   allTasks(label: 'Все');
 
-  const TaskListMode({required this.label});
+  const TaskScopeMode({required this.label});
 
   final String label;
 }
 
 enum TaskStatusFilter {
+  active(label: 'Активные'),
   all(label: 'Все'),
   pending(label: 'В работе'),
   postponed(label: 'Отложенные'),
@@ -19,11 +31,31 @@ enum TaskStatusFilter {
   final String label;
 }
 
-enum TaskSortOption {
-  chronological(label: 'По времени'),
-  priorityFirst(label: 'По приоритету');
+enum TaskCategoryFilter {
+  all(label: 'Все категории'),
+  work(label: 'Работа', category: TaskCategory.work),
+  personal(label: 'Личное', category: TaskCategory.personal),
+  interview(label: 'Интервью', category: TaskCategory.interview),
+  publication(label: 'Публикация', category: TaskCategory.publication),
+  call(label: 'Звонок', category: TaskCategory.call),
+  other(label: 'Другое', category: TaskCategory.other);
 
-  const TaskSortOption({required this.label});
+  const TaskCategoryFilter({required this.label, this.category});
+
+  final String label;
+  final TaskCategory? category;
+
+  bool matches(TaskCategory value) {
+    return category == null || category == value;
+  }
+}
+
+enum TaskListSortOption {
+  deadlineFirst(label: 'По сроку'),
+  dateTime(label: 'По времени/дате'),
+  recentlyUpdated(label: 'Недавно изменённые');
+
+  const TaskListSortOption({required this.label});
 
   final String label;
 }

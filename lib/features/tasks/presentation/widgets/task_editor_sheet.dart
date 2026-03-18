@@ -13,7 +13,8 @@ import '../../../../core/widgets/app_dropdown_field.dart';
 import '../../../../core/widgets/app_surface_card.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/task_category.dart';
-import '../../domain/entities/task_priority.dart';
+import '../../domain/entities/task_checklist_item.dart';
+import '../../domain/entities/task_quadrant.dart';
 import '../../domain/entities/task_status.dart';
 import '../controllers/task_editor_controller.dart';
 
@@ -71,7 +72,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
           key: const Key('task-editor-dialog'),
           insetPadding: const EdgeInsets.all(AppSpacing.xl),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760, maxHeight: 760),
+            constraints: const BoxConstraints(maxWidth: 860, maxHeight: 860),
             child: Material(
               color: Theme.of(context).colorScheme.surface,
               child: Column(
@@ -231,7 +232,6 @@ class _TaskEditorFormBody extends StatefulWidget {
 
 class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
   late final TextEditingController _titleController;
-  late final TextEditingController _descriptionController;
 
   @override
   void initState() {
@@ -240,17 +240,11 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
       ..addListener(() {
         widget.controller.updateTitle(_titleController.text);
       });
-    _descriptionController =
-        TextEditingController(text: widget.controller.description)
-          ..addListener(() {
-            widget.controller.updateDescription(_descriptionController.text);
-          });
   }
 
   @override
   void dispose() {
     _titleController.dispose();
-    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -341,6 +335,8 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
 
   @override
   Widget build(BuildContext context) {
+    final bool compact = MediaQuery.sizeOf(context).width < 760;
+
     return Obx(
       () => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,21 +351,47 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
                   textCapitalization: TextCapitalization.sentences,
                   decoration: InputDecoration(
                     labelText: 'Название',
-                    hintText: 'Например, подготовить интервью',
+                    hintText: 'Например, пойти в магазин',
                     errorText: widget.controller.titleError,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.lg),
-                TextField(
-                  key: const Key('task-editor-description-field'),
-                  controller: _descriptionController,
-                  textCapitalization: TextCapitalization.sentences,
-                  minLines: 3,
-                  maxLines: 6,
-                  decoration: const InputDecoration(
-                    labelText: 'Описание',
-                    hintText: 'Короткий контекст, ссылки или заметки',
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  'Квадрант Эйзенхауэра',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Wrap(
+                  key: const Key('task-editor-quadrant-selector'),
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: widget.controller.quadrantOptions
+                      .map((TaskQuadrant quadrant) {
+                        final bool selected =
+                            widget.controller.quadrant == quadrant;
+                        return ChoiceChip(
+                          key: Key(
+                            'task-editor-quadrant-option-${quadrant.name}',
+                          ),
+                          label: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Text(quadrant.label),
+                              Text(
+                                quadrant.subtitle,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                          selected: selected,
+                          onSelected: (_) =>
+                              widget.controller.updateQuadrant(quadrant),
+                        );
+                      })
+                      .toList(growable: false),
                 ),
               ],
             ),
@@ -379,145 +401,68 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  'Когда делать',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                AppButton(
-                  label: widget.controller.dateLabel,
-                  icon: Icons.event_outlined,
-                  variant: AppButtonVariant.secondary,
-                  isExpanded: true,
-                  onPressed: _selectDate,
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                SwitchListTile(
-                  key: const Key('task-editor-all-day-switch'),
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Весь день'),
-                  subtitle: const Text(
-                    'Если включено, задача не требует конкретного времени.',
-                  ),
-                  value: widget.controller.isAllDay,
-                  onChanged: widget.controller.updateAllDaySafe,
-                ),
-                if (!widget.controller.isAllDay) ...<Widget>[
-                  const SizedBox(height: AppSpacing.lg),
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: AppButton(
-                          label: widget.controller.startTimeLabel,
-                          icon: Icons.schedule_outlined,
-                          variant: AppButtonVariant.secondary,
-                          isExpanded: true,
-                          onPressed: _selectTime,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      IconButton(
-                        key: const Key('task-editor-clear-time-button'),
-                        tooltip: 'Очистить время',
-                        onPressed: widget.controller.startTime == null
-                            ? null
-                            : () => widget.controller.updateStartTime(null),
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  if (widget.controller.canEditDuration)
-                    AppDropdownField<int?>(
-                      label: 'Длительность',
-                      value: widget.controller.durationMinutes,
-                      fieldKey: const Key('task-editor-duration-dropdown'),
-                      items: <DropdownMenuItem<int?>>[
-                        const DropdownMenuItem<int?>(
-                          value: null,
-                          child: Text('Без длительности'),
-                        ),
-                        ...TaskEditorController.durationOptions.map(
-                          (int value) => DropdownMenuItem<int?>(
-                            key: Key('task-editor-duration-option-$value'),
-                            value: value,
-                            child: Text('$value минут'),
-                          ),
-                        ),
-                      ],
-                      onChanged: widget.controller.updateDurationMinutes,
-                      width: double.infinity,
-                    )
-                  else
-                    Text(
-                      'Сначала укажи время, и тогда появится выбор '
-                      'длительности.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                ],
-                const SizedBox(height: AppSpacing.lg),
                 Row(
                   children: <Widget>[
                     Expanded(
-                      child: AppButton(
-                        key: const Key('task-editor-deadline-button'),
-                        label: widget.controller.deadlineLabel,
-                        icon: Icons.flag_outlined,
-                        variant: AppButtonVariant.secondary,
-                        isExpanded: true,
-                        onPressed: _selectDeadline,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            'Подпункты',
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'Разбей задачу на короткие actionable-шаги.',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-                    IconButton(
-                      key: const Key('task-editor-clear-deadline-button'),
-                      tooltip: 'Очистить дедлайн',
-                      onPressed: widget.controller.deadline == null
-                          ? null
-                          : () => widget.controller.updateDeadline(null),
-                      icon: const Icon(Icons.close_rounded),
+                    AppButton(
+                      key: const Key('task-editor-add-subtask-button'),
+                      label: 'Добавить',
+                      icon: Icons.add_rounded,
+                      variant: AppButtonVariant.secondary,
+                      onPressed: () => widget.controller.addSubtask(),
                     ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                AppDropdownField<ReminderLeadTimePreset>(
-                  label: 'Напоминание',
-                  value: widget.controller.reminderPreset,
-                  fieldKey: const Key('task-editor-reminder-preset-dropdown'),
-                  items: widget.controller.reminderPresetOptions
-                      .map(
-                        (
-                          ReminderLeadTimePreset preset,
-                        ) => DropdownMenuItem<ReminderLeadTimePreset>(
-                          key: Key(
-                            'task-editor-reminder-preset-option-${preset.name}',
-                          ),
-                          value: preset,
-                          child: Text(preset.label),
-                        ),
-                      )
-                      .toList(growable: false),
-                  onChanged: (ReminderLeadTimePreset? preset) {
-                    if (preset != null) {
-                      widget.controller.updateReminderPreset(preset);
-                    }
-                  },
-                  width: double.infinity,
-                ),
-                if (widget.controller.reminderHelperText != null) ...<Widget>[
-                  const SizedBox(height: AppSpacing.md),
+                if (widget.controller.subtasks.isEmpty)
                   Text(
-                    widget.controller.reminderHelperText!,
-                    key: const Key('task-editor-reminder-helper'),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                    'Подпунктов пока нет. Добавь, чтобы превратить задачу в понятный план.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  )
+                else
+                  ReorderableListView.builder(
+                    key: const Key('task-editor-subtask-list'),
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    buildDefaultDragHandles: false,
+                    itemCount: widget.controller.subtasks.length,
+                    onReorder: widget.controller.reorderSubtasks,
+                    itemBuilder: (BuildContext context, int index) {
+                      final TaskChecklistItem item =
+                          widget.controller.subtasks[index];
+                      return _ChecklistEditorRow(
+                        key: ValueKey<String>('task-editor-subtask-${item.id}'),
+                        item: item,
+                        onChanged: (String value) => widget.controller
+                            .updateSubtaskTitle(item.id, value),
+                        onSubmitted: (_) => widget.controller.addSubtask(),
+                        onDelete: () =>
+                            widget.controller.removeSubtask(item.id),
+                        onToggleCompleted: (bool? value) => widget.controller
+                            .toggleSubtaskCompletion(item.id, value ?? false),
+                        dragHandle: ReorderableDragStartListener(
+                          index: index,
+                          child: const Icon(Icons.drag_indicator_rounded),
+                        ),
+                      );
+                    },
                   ),
-                ],
               ],
             ),
           ),
@@ -526,40 +471,113 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  'Контекст',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                Wrap(
+                  spacing: AppSpacing.md,
+                  runSpacing: AppSpacing.md,
+                  children: <Widget>[
+                    AppButton(
+                      key: const Key('task-editor-date-button'),
+                      label: widget.controller.dateLabel,
+                      icon: Icons.event_outlined,
+                      variant: AppButtonVariant.secondary,
+                      onPressed: _selectDate,
+                    ),
+                    AppButton(
+                      key: const Key('task-editor-start-time-button'),
+                      label: widget.controller.startTimeLabel,
+                      icon: Icons.schedule_outlined,
+                      variant: AppButtonVariant.secondary,
+                      onPressed: widget.controller.isAllDay
+                          ? null
+                          : _selectTime,
+                    ),
+                    AppButton(
+                      key: const Key('task-editor-deadline-button'),
+                      label: widget.controller.deadlineLabel,
+                      icon: Icons.flag_outlined,
+                      variant: AppButtonVariant.secondary,
+                      onPressed: _selectDeadline,
+                    ),
+                    if (widget.controller.deadline != null)
+                      AppButton(
+                        key: const Key('task-editor-clear-deadline-button'),
+                        label: 'Очистить дедлайн',
+                        variant: AppButtonVariant.tonal,
+                        onPressed: () => widget.controller.updateDeadline(null),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                LayoutBuilder(
-                  builder: (BuildContext context, BoxConstraints constraints) {
-                    final bool stackFields = constraints.maxWidth < 560;
-                    final Widget priorityField = AppDropdownField<TaskPriority>(
-                      label: 'Приоритет',
-                      value: widget.controller.priority,
-                      fieldKey: const Key('task-editor-priority-dropdown'),
-                      items: TaskPriority.values
+                SwitchListTile.adaptive(
+                  key: const Key('task-editor-all-day-switch'),
+                  value: widget.controller.isAllDay,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('На весь день'),
+                  subtitle: const Text(
+                    'Отключает точное время и длительность для задачи.',
+                  ),
+                  onChanged: widget.controller.setAllDay,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Wrap(
+                  spacing: AppSpacing.md,
+                  runSpacing: AppSpacing.md,
+                  children: <Widget>[
+                    SizedBox(
+                      width: compact ? double.infinity : 220,
+                      child: DropdownButtonFormField<int?>(
+                        key: const Key('task-editor-duration-dropdown'),
+                        initialValue: widget.controller.canEditDuration
+                            ? widget.controller.durationMinutes
+                            : null,
+                        isExpanded: true,
+                        items: <DropdownMenuItem<int?>>[
+                          const DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text('Без длительности'),
+                          ),
+                          ...TaskEditorController.durationOptions.map(
+                            (int value) => DropdownMenuItem<int?>(
+                              key: Key('task-editor-duration-option-$value'),
+                              value: value,
+                              child: Text('$value минут'),
+                            ),
+                          ),
+                        ],
+                        onChanged: widget.controller.canEditDuration
+                            ? widget.controller.updateDurationMinutes
+                            : null,
+                        decoration: const InputDecoration(
+                          labelText: 'Длительность',
+                        ),
+                      ),
+                    ),
+                    AppDropdownField<ReminderLeadTimePreset>(
+                      label: 'Напоминание',
+                      value: widget.controller.reminderPreset,
+                      fieldKey: const Key(
+                        'task-editor-reminder-preset-dropdown',
+                      ),
+                      items: ReminderLeadTimePreset.values
                           .map(
-                            (TaskPriority value) =>
-                                DropdownMenuItem<TaskPriority>(
+                            (ReminderLeadTimePreset value) =>
+                                DropdownMenuItem<ReminderLeadTimePreset>(
                                   key: Key(
-                                    'task-editor-priority-option-${value.name}',
+                                    'task-editor-reminder-option-${value.name}',
                                   ),
                                   value: value,
                                   child: Text(value.label),
                                 ),
                           )
                           .toList(growable: false),
-                      onChanged: (TaskPriority? value) {
+                      onChanged: (ReminderLeadTimePreset? value) {
                         if (value != null) {
-                          widget.controller.updatePriority(value);
+                          widget.controller.updateReminderPreset(value);
                         }
                       },
-                      width: double.infinity,
-                    );
-                    final Widget categoryField = AppDropdownField<TaskCategory>(
+                      width: compact ? double.infinity : 240,
+                    ),
+                    AppDropdownField<TaskCategory>(
                       label: 'Категория',
                       value: widget.controller.category,
                       fieldKey: const Key('task-editor-category-dropdown'),
@@ -580,9 +598,9 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
                           widget.controller.updateCategory(value);
                         }
                       },
-                      width: double.infinity,
-                    );
-                    final Widget statusField = AppDropdownField<TaskStatus>(
+                      width: compact ? double.infinity : 220,
+                    ),
+                    AppDropdownField<TaskStatus>(
                       label: 'Статус',
                       value: widget.controller.status,
                       fieldKey: const Key('task-editor-status-dropdown'),
@@ -602,33 +620,18 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
                           widget.controller.updateStatus(value);
                         }
                       },
-                      width: double.infinity,
-                    );
-
-                    if (stackFields) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          priorityField,
-                          const SizedBox(height: AppSpacing.lg),
-                          categoryField,
-                          const SizedBox(height: AppSpacing.lg),
-                          statusField,
-                        ],
-                      );
-                    }
-
-                    return Row(
-                      children: <Widget>[
-                        Expanded(child: priorityField),
-                        const SizedBox(width: AppSpacing.lg),
-                        Expanded(child: categoryField),
-                        const SizedBox(width: AppSpacing.lg),
-                        Expanded(child: statusField),
-                      ],
-                    );
-                  },
+                      width: compact ? double.infinity : 220,
+                    ),
+                  ],
                 ),
+                if (widget.controller.reminderHelperText != null) ...<Widget>[
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    widget.controller.reminderHelperText!,
+                    key: const Key('task-editor-reminder-helper'),
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
               ],
             ),
           ),
@@ -638,8 +641,53 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
   }
 }
 
-extension on TaskEditorController {
-  void updateAllDaySafe(bool value) {
-    setAllDay(value);
+class _ChecklistEditorRow extends StatelessWidget {
+  const _ChecklistEditorRow({
+    required this.item,
+    required this.onChanged,
+    required this.onSubmitted,
+    required this.onDelete,
+    required this.onToggleCompleted,
+    required this.dragHandle,
+    super.key,
+  });
+
+  final TaskChecklistItem item;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<String> onSubmitted;
+  final VoidCallback onDelete;
+  final ValueChanged<bool?> onToggleCompleted;
+  final Widget dragHandle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      key: key,
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Row(
+        children: <Widget>[
+          dragHandle,
+          Checkbox(value: item.isCompleted, onChanged: onToggleCompleted),
+          Expanded(
+            child: TextFormField(
+              key: Key('task-editor-subtask-field-${item.id}'),
+              initialValue: item.title,
+              textCapitalization: TextCapitalization.sentences,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                hintText: 'Например, купить молоко',
+              ),
+              onChanged: onChanged,
+              onFieldSubmitted: onSubmitted,
+            ),
+          ),
+          IconButton(
+            key: Key('task-editor-subtask-delete-${item.id}'),
+            onPressed: onDelete,
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ],
+      ),
+    );
   }
 }

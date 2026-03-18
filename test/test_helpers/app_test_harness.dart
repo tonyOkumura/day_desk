@@ -13,6 +13,8 @@ import 'package:day_desk/features/settings/domain/entities/app_theme_palette.dar
 import 'package:day_desk/features/settings/domain/entities/app_theme_preference.dart';
 import 'package:day_desk/features/settings/domain/repositories/app_settings_repository.dart';
 import 'package:day_desk/features/tasks/domain/entities/task.dart';
+import 'package:day_desk/features/tasks/domain/entities/task_checklist_item.dart';
+import 'package:day_desk/features/tasks/domain/entities/task_quadrant.dart';
 import 'package:day_desk/features/tasks/domain/entities/task_status.dart';
 import 'package:day_desk/features/tasks/domain/repositories/task_repository.dart';
 import 'package:flutter/widgets.dart';
@@ -312,6 +314,44 @@ class FakeTaskRepository implements TaskRepository {
     await updateTask(
       task.copyWith(
         status: postponed ? TaskStatus.postponed : TaskStatus.pending,
+        updatedAt: DateTime.now(),
+      ),
+    );
+  }
+
+  @override
+  Future<void> updateTaskQuadrant(
+    String taskId, {
+    required TaskQuadrant quadrant,
+  }) async {
+    final Task task = _tasks.firstWhere((Task item) => item.id == taskId);
+    await updateTask(
+      task.copyWith(
+        isUrgent: quadrant.isUrgent,
+        isImportant: quadrant.isImportant,
+        updatedAt: DateTime.now(),
+      ),
+    );
+  }
+
+  @override
+  Future<void> toggleSubtaskCompleted(
+    String taskId,
+    String subtaskId, {
+    required bool completed,
+  }) async {
+    final Task task = _tasks.firstWhere((Task item) => item.id == taskId);
+    await updateTask(
+      task.copyWith(
+        subtasks: task.subtasks
+            .map((TaskChecklistItem item) {
+              if (item.id != subtaskId) {
+                return item;
+              }
+
+              return item.copyWith(isCompleted: completed);
+            })
+            .toList(growable: false),
         updatedAt: DateTime.now(),
       ),
     );

@@ -3,10 +3,37 @@ import 'package:isar/isar.dart';
 import '../../../../core/reminders/reminder_lead_time_preset.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/task_category.dart';
-import '../../domain/entities/task_priority.dart';
+import '../../domain/entities/task_checklist_item.dart';
 import '../../domain/entities/task_status.dart';
 
 part 'task_local_model.g.dart';
+
+@embedded
+class TaskChecklistItemLocalModel {
+  TaskChecklistItemLocalModel();
+
+  late String itemId;
+  late String title;
+  bool isCompleted = false;
+  int sortOrder = 0;
+
+  TaskChecklistItem toEntity() {
+    return TaskChecklistItem(
+      id: itemId,
+      title: title,
+      isCompleted: isCompleted,
+      sortOrder: sortOrder,
+    );
+  }
+
+  static TaskChecklistItemLocalModel fromEntity(TaskChecklistItem item) {
+    return TaskChecklistItemLocalModel()
+      ..itemId = item.id
+      ..title = item.title
+      ..isCompleted = item.isCompleted
+      ..sortOrder = item.sortOrder;
+  }
+}
 
 @collection
 class TaskLocalModel {
@@ -22,8 +49,6 @@ class TaskLocalModel {
 
   late String title;
 
-  String? description;
-
   DateTime? startTime;
 
   int? durationMinutes;
@@ -35,8 +60,11 @@ class TaskLocalModel {
 
   DateTime? reminderAt;
 
-  @Enumerated(EnumType.name)
-  TaskPriority priority = TaskPriority.medium;
+  bool isUrgent = false;
+
+  bool isImportant = true;
+
+  List<TaskChecklistItemLocalModel> subtasks = <TaskChecklistItemLocalModel>[];
 
   @Enumerated(EnumType.name)
   TaskStatus status = TaskStatus.pending;
@@ -54,14 +82,17 @@ class TaskLocalModel {
     return Task(
       id: taskId,
       title: title,
-      description: description,
       date: date,
       startTime: startTime,
       durationMinutes: durationMinutes,
       deadline: deadline,
       reminderPreset: reminderPreset,
       reminderAt: reminderAt,
-      priority: priority,
+      isUrgent: isUrgent,
+      isImportant: isImportant,
+      subtasks: subtasks
+          .map((TaskChecklistItemLocalModel item) => item.toEntity())
+          .toList(growable: false),
       status: status,
       category: category,
       isAllDay: isAllDay,
@@ -76,14 +107,17 @@ class TaskLocalModel {
       ..isarId = isarId ?? Isar.autoIncrement
       ..taskId = normalizedTask.id
       ..title = normalizedTask.title
-      ..description = normalizedTask.description
       ..date = normalizedTask.date
       ..startTime = normalizedTask.startTime
       ..durationMinutes = normalizedTask.durationMinutes
       ..deadline = normalizedTask.deadline
       ..reminderPreset = normalizedTask.reminderPreset
       ..reminderAt = normalizedTask.reminderAt
-      ..priority = normalizedTask.priority
+      ..isUrgent = normalizedTask.isUrgent
+      ..isImportant = normalizedTask.isImportant
+      ..subtasks = normalizedTask.subtasks
+          .map(TaskChecklistItemLocalModel.fromEntity)
+          .toList(growable: false)
       ..status = normalizedTask.status
       ..category = normalizedTask.category
       ..isAllDay = normalizedTask.isAllDay

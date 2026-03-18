@@ -5,7 +5,7 @@ import 'package:day_desk/core/notifications/notification_config.dart';
 import 'package:day_desk/core/reminders/reminder_lead_time_preset.dart';
 import 'package:day_desk/features/tasks/domain/entities/task.dart';
 import 'package:day_desk/features/tasks/domain/entities/task_category.dart';
-import 'package:day_desk/features/tasks/domain/entities/task_priority.dart';
+import 'package:day_desk/features/tasks/domain/entities/task_quadrant.dart';
 import 'package:day_desk/features/tasks/domain/entities/task_status.dart';
 import 'package:day_desk/features/tasks/presentation/controllers/task_editor_controller.dart';
 import 'package:flutter/widgets.dart';
@@ -77,7 +77,7 @@ void main() {
   );
 
   test(
-    'TaskEditorController сохраняет create и update через один flow',
+    'TaskEditorController сохраняет create и update через один flow с квадрантом и подпунктами',
     () async {
       final FakeTaskRepository repository = FakeTaskRepository();
       final TaskEditorController createController = TaskEditorController(
@@ -87,13 +87,17 @@ void main() {
         notificationService: RecordingTaskNotificationService(),
       );
 
-      createController.updateTitle('Написать заметку');
-      createController.updateDescription('Собрать материалы и сделать драфт');
-      createController.updatePriority(TaskPriority.high);
-      createController.updateCategory(TaskCategory.publication);
+      createController.updateTitle('Сходить в магазин');
+      createController.updateQuadrant(TaskQuadrant.quickWins);
+      createController.updateCategory(TaskCategory.personal);
       createController.updateDeadline(DateTime(2026, 3, 18, 18));
       createController.updateReminderPreset(ReminderLeadTimePreset.hour1);
       createController.updateStatus(TaskStatus.postponed);
+      createController.addSubtask();
+      createController.updateSubtaskTitle(
+        createController.subtasks.first.id,
+        'Купить молоко',
+      );
 
       final Task? created = await createController.save();
 
@@ -103,6 +107,8 @@ void main() {
       expect(created.reminderPreset, ReminderLeadTimePreset.hour1);
       expect(created.reminderAt, DateTime(2026, 3, 18, 17));
       expect(created.status, TaskStatus.postponed);
+      expect(created.quadrant, TaskQuadrant.quickWins);
+      expect(created.subtasks.single.title, 'Купить молоко');
 
       final TaskEditorController updateController = TaskEditorController(
         repository: repository,
@@ -111,14 +117,14 @@ void main() {
         notificationService: RecordingTaskNotificationService(),
         initialTask: created,
       );
-      updateController.updateTitle('Написать заметку и отправить редактору');
+      updateController.updateTitle('Сходить в магазин и аптеку');
 
       final Task? updated = await updateController.save();
 
       expect(updated, isNotNull);
       expect(
         (await repository.getAllTasks()).single.title,
-        'Написать заметку и отправить редактору',
+        'Сходить в магазин и аптеку',
       );
     },
   );
@@ -156,8 +162,30 @@ void main() {
       expect(created, isNotNull);
       expect(created!.reminderPreset, ReminderLeadTimePreset.minutes15);
       expect(created.reminderAt, isNull);
+      expect(created.quadrant, TaskQuadrant.schedule);
     },
   );
+
+  test('TaskEditorController reorder-ит подпункты', () {
+    final TaskEditorController controller = TaskEditorController(
+      repository: FakeTaskRepository(),
+      dateFormatter: AppDateFormatter(),
+      logger: AppLogger(),
+      notificationService: RecordingTaskNotificationService(),
+    );
+
+    controller.addSubtask();
+    controller.addSubtask();
+    controller.updateSubtaskTitle(controller.subtasks[0].id, 'Первое');
+    controller.updateSubtaskTitle(controller.subtasks[1].id, 'Второе');
+
+    controller.reorderSubtasks(0, 2);
+
+    expect(controller.subtasks.map((item) => item.title).toList(), <String>[
+      'Второе',
+      'Первое',
+    ]);
+  });
 }
 
 class RecordingTaskNotificationService extends AppNotificationService {

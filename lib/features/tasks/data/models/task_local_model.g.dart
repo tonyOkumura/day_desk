@@ -38,26 +38,25 @@ const TaskLocalModelSchema = CollectionSchema(
       name: r'deadline',
       type: IsarType.dateTime,
     ),
-    r'description': PropertySchema(
-      id: 4,
-      name: r'description',
-      type: IsarType.string,
-    ),
     r'durationMinutes': PropertySchema(
-      id: 5,
+      id: 4,
       name: r'durationMinutes',
       type: IsarType.long,
     ),
     r'isAllDay': PropertySchema(
-      id: 6,
+      id: 5,
       name: r'isAllDay',
       type: IsarType.bool,
     ),
-    r'priority': PropertySchema(
+    r'isImportant': PropertySchema(
+      id: 6,
+      name: r'isImportant',
+      type: IsarType.bool,
+    ),
+    r'isUrgent': PropertySchema(
       id: 7,
-      name: r'priority',
-      type: IsarType.string,
-      enumMap: _TaskLocalModelpriorityEnumValueMap,
+      name: r'isUrgent',
+      type: IsarType.bool,
     ),
     r'reminderAt': PropertySchema(
       id: 8,
@@ -81,18 +80,24 @@ const TaskLocalModelSchema = CollectionSchema(
       type: IsarType.string,
       enumMap: _TaskLocalModelstatusEnumValueMap,
     ),
-    r'taskId': PropertySchema(
+    r'subtasks': PropertySchema(
       id: 12,
+      name: r'subtasks',
+      type: IsarType.objectList,
+      target: r'TaskChecklistItemLocalModel',
+    ),
+    r'taskId': PropertySchema(
+      id: 13,
       name: r'taskId',
       type: IsarType.string,
     ),
     r'title': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'title',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -131,7 +136,9 @@ const TaskLocalModelSchema = CollectionSchema(
     )
   },
   links: {},
-  embeddedSchemas: {},
+  embeddedSchemas: {
+    r'TaskChecklistItemLocalModel': TaskChecklistItemLocalModelSchema
+  },
   getId: _taskLocalModelGetId,
   getLinks: _taskLocalModelGetLinks,
   attach: _taskLocalModelAttach,
@@ -145,15 +152,17 @@ int _taskLocalModelEstimateSize(
 ) {
   var bytesCount = offsets.last;
   bytesCount += 3 + object.category.name.length * 3;
-  {
-    final value = object.description;
-    if (value != null) {
-      bytesCount += 3 + value.length * 3;
-    }
-  }
-  bytesCount += 3 + object.priority.name.length * 3;
   bytesCount += 3 + object.reminderPreset.name.length * 3;
   bytesCount += 3 + object.status.name.length * 3;
+  bytesCount += 3 + object.subtasks.length * 3;
+  {
+    final offsets = allOffsets[TaskChecklistItemLocalModel]!;
+    for (var i = 0; i < object.subtasks.length; i++) {
+      final value = object.subtasks[i];
+      bytesCount += TaskChecklistItemLocalModelSchema.estimateSize(
+          value, offsets, allOffsets);
+    }
+  }
   bytesCount += 3 + object.taskId.length * 3;
   bytesCount += 3 + object.title.length * 3;
   return bytesCount;
@@ -169,17 +178,23 @@ void _taskLocalModelSerialize(
   writer.writeDateTime(offsets[1], object.createdAt);
   writer.writeDateTime(offsets[2], object.date);
   writer.writeDateTime(offsets[3], object.deadline);
-  writer.writeString(offsets[4], object.description);
-  writer.writeLong(offsets[5], object.durationMinutes);
-  writer.writeBool(offsets[6], object.isAllDay);
-  writer.writeString(offsets[7], object.priority.name);
+  writer.writeLong(offsets[4], object.durationMinutes);
+  writer.writeBool(offsets[5], object.isAllDay);
+  writer.writeBool(offsets[6], object.isImportant);
+  writer.writeBool(offsets[7], object.isUrgent);
   writer.writeDateTime(offsets[8], object.reminderAt);
   writer.writeString(offsets[9], object.reminderPreset.name);
   writer.writeDateTime(offsets[10], object.startTime);
   writer.writeString(offsets[11], object.status.name);
-  writer.writeString(offsets[12], object.taskId);
-  writer.writeString(offsets[13], object.title);
-  writer.writeDateTime(offsets[14], object.updatedAt);
+  writer.writeObjectList<TaskChecklistItemLocalModel>(
+    offsets[12],
+    allOffsets,
+    TaskChecklistItemLocalModelSchema.serialize,
+    object.subtasks,
+  );
+  writer.writeString(offsets[13], object.taskId);
+  writer.writeString(offsets[14], object.title);
+  writer.writeDateTime(offsets[15], object.updatedAt);
 }
 
 TaskLocalModel _taskLocalModelDeserialize(
@@ -195,13 +210,11 @@ TaskLocalModel _taskLocalModelDeserialize(
   object.createdAt = reader.readDateTime(offsets[1]);
   object.date = reader.readDateTime(offsets[2]);
   object.deadline = reader.readDateTimeOrNull(offsets[3]);
-  object.description = reader.readStringOrNull(offsets[4]);
-  object.durationMinutes = reader.readLongOrNull(offsets[5]);
-  object.isAllDay = reader.readBool(offsets[6]);
+  object.durationMinutes = reader.readLongOrNull(offsets[4]);
+  object.isAllDay = reader.readBool(offsets[5]);
+  object.isImportant = reader.readBool(offsets[6]);
+  object.isUrgent = reader.readBool(offsets[7]);
   object.isarId = id;
-  object.priority = _TaskLocalModelpriorityValueEnumMap[
-          reader.readStringOrNull(offsets[7])] ??
-      TaskPriority.low;
   object.reminderAt = reader.readDateTimeOrNull(offsets[8]);
   object.reminderPreset = _TaskLocalModelreminderPresetValueEnumMap[
           reader.readStringOrNull(offsets[9])] ??
@@ -210,9 +223,16 @@ TaskLocalModel _taskLocalModelDeserialize(
   object.status =
       _TaskLocalModelstatusValueEnumMap[reader.readStringOrNull(offsets[11])] ??
           TaskStatus.pending;
-  object.taskId = reader.readString(offsets[12]);
-  object.title = reader.readString(offsets[13]);
-  object.updatedAt = reader.readDateTime(offsets[14]);
+  object.subtasks = reader.readObjectList<TaskChecklistItemLocalModel>(
+        offsets[12],
+        TaskChecklistItemLocalModelSchema.deserialize,
+        allOffsets,
+        TaskChecklistItemLocalModel(),
+      ) ??
+      [];
+  object.taskId = reader.readString(offsets[13]);
+  object.title = reader.readString(offsets[14]);
+  object.updatedAt = reader.readDateTime(offsets[15]);
   return object;
 }
 
@@ -234,15 +254,13 @@ P _taskLocalModelDeserializeProp<P>(
     case 3:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 4:
-      return (reader.readStringOrNull(offset)) as P;
-    case 5:
       return (reader.readLongOrNull(offset)) as P;
+    case 5:
+      return (reader.readBool(offset)) as P;
     case 6:
       return (reader.readBool(offset)) as P;
     case 7:
-      return (_TaskLocalModelpriorityValueEnumMap[
-              reader.readStringOrNull(offset)] ??
-          TaskPriority.low) as P;
+      return (reader.readBool(offset)) as P;
     case 8:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 9:
@@ -256,10 +274,18 @@ P _taskLocalModelDeserializeProp<P>(
               reader.readStringOrNull(offset)] ??
           TaskStatus.pending) as P;
     case 12:
-      return (reader.readString(offset)) as P;
+      return (reader.readObjectList<TaskChecklistItemLocalModel>(
+            offset,
+            TaskChecklistItemLocalModelSchema.deserialize,
+            allOffsets,
+            TaskChecklistItemLocalModel(),
+          ) ??
+          []) as P;
     case 13:
       return (reader.readString(offset)) as P;
     case 14:
+      return (reader.readString(offset)) as P;
+    case 15:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -281,16 +307,6 @@ const _TaskLocalModelcategoryValueEnumMap = {
   r'publication': TaskCategory.publication,
   r'call': TaskCategory.call,
   r'other': TaskCategory.other,
-};
-const _TaskLocalModelpriorityEnumValueMap = {
-  r'low': r'low',
-  r'medium': r'medium',
-  r'high': r'high',
-};
-const _TaskLocalModelpriorityValueEnumMap = {
-  r'low': TaskPriority.low,
-  r'medium': TaskPriority.medium,
-  r'high': TaskPriority.high,
 };
 const _TaskLocalModelreminderPresetEnumValueMap = {
   r'none': r'none',
@@ -933,160 +949,6 @@ extension TaskLocalModelQueryFilter
   }
 
   QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      descriptionIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'description',
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      descriptionIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'description',
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      descriptionEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'description',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      descriptionGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'description',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      descriptionLessThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'description',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      descriptionBetween(
-    String? lower,
-    String? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'description',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      descriptionStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'description',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      descriptionEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'description',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      descriptionContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'description',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      descriptionMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'description',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      descriptionIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'description',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      descriptionIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'description',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
       durationMinutesIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -1171,6 +1033,26 @@ extension TaskLocalModelQueryFilter
   }
 
   QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      isImportantEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isImportant',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      isUrgentEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isUrgent',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
       isarIdEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -1222,142 +1104,6 @@ extension TaskLocalModelQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      priorityEqualTo(
-    TaskPriority value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'priority',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      priorityGreaterThan(
-    TaskPriority value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'priority',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      priorityLessThan(
-    TaskPriority value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'priority',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      priorityBetween(
-    TaskPriority lower,
-    TaskPriority upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'priority',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      priorityStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'priority',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      priorityEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'priority',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      priorityContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'priority',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      priorityMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'priority',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      priorityIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'priority',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
-      priorityIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'priority',
-        value: '',
       ));
     });
   }
@@ -1783,6 +1529,95 @@ extension TaskLocalModelQueryFilter
   }
 
   QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      subtasksLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'subtasks',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      subtasksIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'subtasks',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      subtasksIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'subtasks',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      subtasksLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'subtasks',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      subtasksLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'subtasks',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      subtasksLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'subtasks',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
       taskIdEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -2112,7 +1947,14 @@ extension TaskLocalModelQueryFilter
 }
 
 extension TaskLocalModelQueryObject
-    on QueryBuilder<TaskLocalModel, TaskLocalModel, QFilterCondition> {}
+    on QueryBuilder<TaskLocalModel, TaskLocalModel, QFilterCondition> {
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
+      subtasksElement(FilterQuery<TaskChecklistItemLocalModel> q) {
+    return QueryBuilder.apply(this, (query) {
+      return query.object(q, r'subtasks');
+    });
+  }
+}
 
 extension TaskLocalModelQueryLinks
     on QueryBuilder<TaskLocalModel, TaskLocalModel, QFilterCondition> {}
@@ -2171,20 +2013,6 @@ extension TaskLocalModelQuerySortBy
   }
 
   QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
-      sortByDescription() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'description', Sort.asc);
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
-      sortByDescriptionDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'description', Sort.desc);
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
       sortByDurationMinutes() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'durationMinutes', Sort.asc);
@@ -2211,16 +2039,30 @@ extension TaskLocalModelQuerySortBy
     });
   }
 
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy> sortByPriority() {
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
+      sortByIsImportant() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'priority', Sort.asc);
+      return query.addSortBy(r'isImportant', Sort.asc);
     });
   }
 
   QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
-      sortByPriorityDesc() {
+      sortByIsImportantDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'priority', Sort.desc);
+      return query.addSortBy(r'isImportant', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy> sortByIsUrgent() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isUrgent', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
+      sortByIsUrgentDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isUrgent', Sort.desc);
     });
   }
 
@@ -2371,20 +2213,6 @@ extension TaskLocalModelQuerySortThenBy
   }
 
   QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
-      thenByDescription() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'description', Sort.asc);
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
-      thenByDescriptionDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'description', Sort.desc);
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
       thenByDurationMinutes() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'durationMinutes', Sort.asc);
@@ -2411,6 +2239,33 @@ extension TaskLocalModelQuerySortThenBy
     });
   }
 
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
+      thenByIsImportant() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isImportant', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
+      thenByIsImportantDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isImportant', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy> thenByIsUrgent() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isUrgent', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
+      thenByIsUrgentDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isUrgent', Sort.desc);
+    });
+  }
+
   QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy> thenByIsarId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isarId', Sort.asc);
@@ -2421,19 +2276,6 @@ extension TaskLocalModelQuerySortThenBy
       thenByIsarIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isarId', Sort.desc);
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy> thenByPriority() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'priority', Sort.asc);
-    });
-  }
-
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterSortBy>
-      thenByPriorityDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'priority', Sort.desc);
     });
   }
 
@@ -2558,13 +2400,6 @@ extension TaskLocalModelQueryWhereDistinct
     });
   }
 
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QDistinct> distinctByDescription(
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'description', caseSensitive: caseSensitive);
-    });
-  }
-
   QueryBuilder<TaskLocalModel, TaskLocalModel, QDistinct>
       distinctByDurationMinutes() {
     return QueryBuilder.apply(this, (query) {
@@ -2578,10 +2413,16 @@ extension TaskLocalModelQueryWhereDistinct
     });
   }
 
-  QueryBuilder<TaskLocalModel, TaskLocalModel, QDistinct> distinctByPriority(
-      {bool caseSensitive = true}) {
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QDistinct>
+      distinctByIsImportant() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'priority', caseSensitive: caseSensitive);
+      return query.addDistinctBy(r'isImportant');
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QDistinct> distinctByIsUrgent() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isUrgent');
     });
   }
 
@@ -2669,13 +2510,6 @@ extension TaskLocalModelQueryProperty
     });
   }
 
-  QueryBuilder<TaskLocalModel, String?, QQueryOperations>
-      descriptionProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'description');
-    });
-  }
-
   QueryBuilder<TaskLocalModel, int?, QQueryOperations>
       durationMinutesProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -2689,10 +2523,15 @@ extension TaskLocalModelQueryProperty
     });
   }
 
-  QueryBuilder<TaskLocalModel, TaskPriority, QQueryOperations>
-      priorityProperty() {
+  QueryBuilder<TaskLocalModel, bool, QQueryOperations> isImportantProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'priority');
+      return query.addPropertyName(r'isImportant');
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, bool, QQueryOperations> isUrgentProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isUrgent');
     });
   }
 
@@ -2723,6 +2562,13 @@ extension TaskLocalModelQueryProperty
     });
   }
 
+  QueryBuilder<TaskLocalModel, List<TaskChecklistItemLocalModel>,
+      QQueryOperations> subtasksProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'subtasks');
+    });
+  }
+
   QueryBuilder<TaskLocalModel, String, QQueryOperations> taskIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'taskId');
@@ -2741,3 +2587,450 @@ extension TaskLocalModelQueryProperty
     });
   }
 }
+
+// **************************************************************************
+// IsarEmbeddedGenerator
+// **************************************************************************
+
+// coverage:ignore-file
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
+
+const TaskChecklistItemLocalModelSchema = Schema(
+  name: r'TaskChecklistItemLocalModel',
+  id: -558598536580160232,
+  properties: {
+    r'isCompleted': PropertySchema(
+      id: 0,
+      name: r'isCompleted',
+      type: IsarType.bool,
+    ),
+    r'itemId': PropertySchema(
+      id: 1,
+      name: r'itemId',
+      type: IsarType.string,
+    ),
+    r'sortOrder': PropertySchema(
+      id: 2,
+      name: r'sortOrder',
+      type: IsarType.long,
+    ),
+    r'title': PropertySchema(
+      id: 3,
+      name: r'title',
+      type: IsarType.string,
+    )
+  },
+  estimateSize: _taskChecklistItemLocalModelEstimateSize,
+  serialize: _taskChecklistItemLocalModelSerialize,
+  deserialize: _taskChecklistItemLocalModelDeserialize,
+  deserializeProp: _taskChecklistItemLocalModelDeserializeProp,
+);
+
+int _taskChecklistItemLocalModelEstimateSize(
+  TaskChecklistItemLocalModel object,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  var bytesCount = offsets.last;
+  bytesCount += 3 + object.itemId.length * 3;
+  bytesCount += 3 + object.title.length * 3;
+  return bytesCount;
+}
+
+void _taskChecklistItemLocalModelSerialize(
+  TaskChecklistItemLocalModel object,
+  IsarWriter writer,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  writer.writeBool(offsets[0], object.isCompleted);
+  writer.writeString(offsets[1], object.itemId);
+  writer.writeLong(offsets[2], object.sortOrder);
+  writer.writeString(offsets[3], object.title);
+}
+
+TaskChecklistItemLocalModel _taskChecklistItemLocalModelDeserialize(
+  Id id,
+  IsarReader reader,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  final object = TaskChecklistItemLocalModel();
+  object.isCompleted = reader.readBool(offsets[0]);
+  object.itemId = reader.readString(offsets[1]);
+  object.sortOrder = reader.readLong(offsets[2]);
+  object.title = reader.readString(offsets[3]);
+  return object;
+}
+
+P _taskChecklistItemLocalModelDeserializeProp<P>(
+  IsarReader reader,
+  int propertyId,
+  int offset,
+  Map<Type, List<int>> allOffsets,
+) {
+  switch (propertyId) {
+    case 0:
+      return (reader.readBool(offset)) as P;
+    case 1:
+      return (reader.readString(offset)) as P;
+    case 2:
+      return (reader.readLong(offset)) as P;
+    case 3:
+      return (reader.readString(offset)) as P;
+    default:
+      throw IsarError('Unknown property with id $propertyId');
+  }
+}
+
+extension TaskChecklistItemLocalModelQueryFilter on QueryBuilder<
+    TaskChecklistItemLocalModel,
+    TaskChecklistItemLocalModel,
+    QFilterCondition> {
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> isCompletedEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isCompleted',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> itemIdEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'itemId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> itemIdGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'itemId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> itemIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'itemId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> itemIdBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'itemId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> itemIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'itemId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> itemIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'itemId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+          QAfterFilterCondition>
+      itemIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'itemId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+          QAfterFilterCondition>
+      itemIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'itemId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> itemIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'itemId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> itemIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'itemId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> sortOrderEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'sortOrder',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> sortOrderGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'sortOrder',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> sortOrderLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'sortOrder',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> sortOrderBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'sortOrder',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> titleEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'title',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> titleGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'title',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> titleLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'title',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> titleBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'title',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> titleStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'title',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> titleEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'title',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+          QAfterFilterCondition>
+      titleContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'title',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+          QAfterFilterCondition>
+      titleMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'title',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> titleIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'title',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<TaskChecklistItemLocalModel, TaskChecklistItemLocalModel,
+      QAfterFilterCondition> titleIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'title',
+        value: '',
+      ));
+    });
+  }
+}
+
+extension TaskChecklistItemLocalModelQueryObject on QueryBuilder<
+    TaskChecklistItemLocalModel,
+    TaskChecklistItemLocalModel,
+    QFilterCondition> {}
