@@ -92,7 +92,6 @@ void main() {
       createController.updateCategory(TaskCategory.personal);
       createController.updateDeadline(DateTime(2026, 3, 18, 18));
       createController.updateReminderPreset(ReminderLeadTimePreset.hour1);
-      createController.updateStatus(TaskStatus.postponed);
       createController.addSubtask();
       createController.updateSubtaskTitle(
         createController.subtasks.first.id,
@@ -106,7 +105,7 @@ void main() {
       expect(created!.deadline, DateTime(2026, 3, 18, 18));
       expect(created.reminderPreset, ReminderLeadTimePreset.hour1);
       expect(created.reminderAt, DateTime(2026, 3, 18, 17));
-      expect(created.status, TaskStatus.postponed);
+      expect(created.status, TaskStatus.pending);
       expect(created.quadrant, TaskQuadrant.quickWins);
       expect(created.subtasks.single.title, 'Купить молоко');
 
@@ -129,18 +128,37 @@ void main() {
     },
   );
 
-  test('TaskEditorController не даёт вручную выбрать overdue', () {
-    final TaskEditorController controller = TaskEditorController(
-      repository: FakeTaskRepository(),
-      dateFormatter: AppDateFormatter(),
-      logger: AppLogger(),
-      notificationService: RecordingTaskNotificationService(),
-    );
+  test(
+    'TaskEditorController сохраняет completion state при редактировании',
+    () async {
+      final FakeTaskRepository repository = FakeTaskRepository(
+        initialTasks: <Task>[
+          Task(
+            id: 'completed-task',
+            title: 'Готовая задача',
+            date: DateTime(2026, 3, 18),
+            status: TaskStatus.completed,
+            createdAt: DateTime(2026, 3, 18, 10),
+            updatedAt: DateTime(2026, 3, 18, 10),
+          ),
+        ],
+      );
 
-    controller.updateStatus(TaskStatus.overdue);
+      final TaskEditorController controller = TaskEditorController(
+        repository: repository,
+        dateFormatter: AppDateFormatter(),
+        logger: AppLogger(),
+        notificationService: RecordingTaskNotificationService(),
+        initialTask: (await repository.getAllTasks()).single,
+      );
 
-    expect(controller.status, TaskStatus.pending);
-  });
+      controller.updateTitle('Готовая задача обновлена');
+      final Task? updated = await controller.save();
+
+      expect(updated, isNotNull);
+      expect(updated!.status, TaskStatus.completed);
+    },
+  );
 
   test(
     'TaskEditorController сохраняет preset без anchor с null reminderAt',

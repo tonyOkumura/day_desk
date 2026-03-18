@@ -18,19 +18,6 @@ enum TaskScopeMode {
   final String label;
 }
 
-enum TaskStatusFilter {
-  active(label: 'Активные'),
-  all(label: 'Все'),
-  pending(label: 'В работе'),
-  postponed(label: 'Отложенные'),
-  overdue(label: 'Просроченные'),
-  completed(label: 'Завершённые');
-
-  const TaskStatusFilter({required this.label});
-
-  final String label;
-}
-
 enum TaskCategoryFilter {
   all(label: 'Все категории'),
   work(label: 'Работа', category: TaskCategory.work),

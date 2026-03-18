@@ -40,10 +40,9 @@ class _TasksPageHeaderState extends State<TasksPageHeader> {
   }
 
   Future<void> _openAddTask() {
-    final DateTime initialDate =
-        _controller.scopeMode == TaskScopeMode.forDay
-            ? _controller.selectedDate
-            : DateTime.now();
+    final DateTime initialDate = _controller.scopeMode == TaskScopeMode.forDay
+        ? _controller.selectedDate
+        : DateTime.now();
     return openTaskEditorFlow(context, initialDate: initialDate);
   }
 
@@ -213,26 +212,6 @@ class _TasksFilterPanel extends StatelessWidget {
               label: Text(controller.selectedDateLabel),
             ),
           ],
-          const SizedBox(height: AppSpacing.xl),
-          Text(
-            'Статус',
-            style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: controller.statusFilters
-                .map(
-                  (TaskStatusFilter filter) => ChoiceChip(
-                    key: Key('task-filter-status-${filter.name}'),
-                    label: Text(filter.label),
-                    selected: controller.statusFilter == filter,
-                    onSelected: (_) => controller.selectStatusFilter(filter),
-                  ),
-                )
-                .toList(growable: false),
-          ),
           const SizedBox(height: AppSpacing.xl),
           Text(
             'Категория',

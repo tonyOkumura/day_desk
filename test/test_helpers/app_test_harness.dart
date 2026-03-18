@@ -306,20 +306,6 @@ class FakeTaskRepository implements TaskRepository {
   }
 
   @override
-  Future<void> setTaskPostponed(
-    String taskId, {
-    required bool postponed,
-  }) async {
-    final Task task = _tasks.firstWhere((Task item) => item.id == taskId);
-    await updateTask(
-      task.copyWith(
-        status: postponed ? TaskStatus.postponed : TaskStatus.pending,
-        updatedAt: DateTime.now(),
-      ),
-    );
-  }
-
-  @override
   Future<void> updateTaskQuadrant(
     String taskId, {
     required TaskQuadrant quadrant,
@@ -406,8 +392,8 @@ class FakeTaskRepository implements TaskRepository {
   }
 
   Task _materializeTask(Task task) {
-    return task.withResolvedReminderSchedule().withEffectiveStatus(
-      reference: _nowProvider(),
+    return task.withResolvedReminderSchedule().copyWith(
+      evaluationTime: _nowProvider(),
     );
   }
 }

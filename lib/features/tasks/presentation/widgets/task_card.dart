@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_radii.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_theme.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../core/config/app_breakpoints.dart';
 import '../../../../core/date/app_date_formatter.dart';
-import '../../../../core/widgets/app_surface_card.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/task_checklist_item.dart';
 import '../../domain/entities/task_quadrant.dart';
@@ -18,7 +19,6 @@ class TaskCard extends StatelessWidget {
     required this.density,
     required this.dateFormatter,
     required this.onToggleCompleted,
-    required this.onTogglePostponed,
     required this.onEdit,
     required this.onDelete,
     required this.onReschedule,
@@ -31,7 +31,6 @@ class TaskCard extends StatelessWidget {
   final TaskCardDensity density;
   final AppDateFormatter dateFormatter;
   final VoidCallback onToggleCompleted;
-  final VoidCallback onTogglePostponed;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onReschedule;
@@ -45,204 +44,175 @@ class TaskCard extends StatelessWidget {
     final ColorScheme colorScheme = theme.colorScheme;
     final bool completed = task.isCompleted;
     final bool overdue = task.isOverdue;
-    final bool postponed = task.isPostponed;
     final List<TaskChecklistItem> previewItems = task.subtasks
         .take(3)
         .toList(growable: false);
     final int hiddenItemsCount = task.subtasks.length - previewItems.length;
 
-    if (density == TaskCardDensity.compact) {
-      return _buildCompactCard(
-        context: context,
-        textTheme: textTheme,
-        colorScheme: colorScheme,
-        completed: completed,
-        overdue: overdue,
-        postponed: postponed,
-      );
-    }
+    final Widget content = density == TaskCardDensity.compact
+        ? _buildCompactContent(
+            context: context,
+            textTheme: textTheme,
+            colorScheme: colorScheme,
+            completed: completed,
+            overdue: overdue,
+          )
+        : _buildComfortableContent(
+            context: context,
+            textTheme: textTheme,
+            colorScheme: colorScheme,
+            completed: completed,
+            overdue: overdue,
+            previewItems: previewItems,
+            hiddenItemsCount: hiddenItemsCount,
+          );
 
-    return _buildComfortableCard(
-      context: context,
-      textTheme: textTheme,
-      colorScheme: colorScheme,
-      completed: completed,
-      overdue: overdue,
-      postponed: postponed,
-      previewItems: previewItems,
-      hiddenItemsCount: hiddenItemsCount,
+    return Opacity(
+      opacity: completed ? 0.74 : 1,
+      child: _TaskInteractiveShell(
+        key: Key('task-card-${task.id}'),
+        tileKey: Key('task-card-tile-${task.id}'),
+        onTap: onEdit,
+        child: Container(
+          key: Key('task-card-density-${density.name}-${task.id}'),
+          child: content,
+        ),
+      ),
     );
   }
 
-  Widget _buildComfortableCard({
+  Widget _buildComfortableContent({
     required BuildContext context,
     required TextTheme textTheme,
     required ColorScheme colorScheme,
     required bool completed,
     required bool overdue,
-    required bool postponed,
     required List<TaskChecklistItem> previewItems,
     required int hiddenItemsCount,
   }) {
-    return Opacity(
-      opacity: postponed ? 0.8 : 1,
-      child: AppSurfaceCard(
-        key: Key('task-card-${task.id}'),
-        child: Container(
-          key: Key('task-card-density-${density.name}-${task.id}'),
-          child: Column(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _TaskCardHeader(
+          title: task.title,
+          titleStyle: _titleStyle(
+            textStyle: textTheme.titleLarge,
+            colorScheme: colorScheme,
+            completed: completed,
+            overdue: overdue,
+          ),
+          titleMaxLines: 3,
+          titleBottomSpacing: AppSpacing.md,
+          completionButton: _buildCompletionButton(
+            completed: completed,
+            compact: false,
+          ),
+          overflowButton: _buildOverflowButton(
+            compact: false,
+            colorScheme: colorScheme,
+          ),
+          metaContent: _buildPrimaryMetaRow(compact: false),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _TaskCardPriorityBlock(
+          dueLabel: _dueSummaryLabel,
+          dueIcon: _dueIcon,
+          dueTone: overdue ? _TaskMetaTone.error : _dueTone,
+          reminderLabel: _reminderSummaryLabel(compact: false),
+          reminderIcon: _reminderIcon,
+          reminderTone: _reminderTone,
+          compact: false,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _TaskTertiaryMeta(
+          categoryLabel: task.category.label,
+          scheduleLabel: task.deadline != null ? _timeLabel : null,
+          compact: false,
+        ),
+        if (previewItems.isNotEmpty) ...<Widget>[
+          const SizedBox(height: AppSpacing.lg),
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              _TaskCardHeader(
-                title: task.title,
-                titleStyle: _titleStyle(
-                  textStyle: textTheme.titleLarge,
-                  colorScheme: colorScheme,
-                  completed: completed,
-                  overdue: overdue,
+              ...previewItems.map(
+                (TaskChecklistItem item) => _TaskSubtaskPreviewRow(
+                  key: Key('task-subtask-${task.id}-${item.id}'),
+                  item: item,
+                  onTap: () => onToggleSubtaskCompleted(item),
                 ),
-                titleMaxLines: 3,
-                titleBottomSpacing: AppSpacing.md,
-                completionButton: _buildCompletionButton(
-                  completed: completed,
-                  compact: false,
-                ),
-                overflowButton: _buildOverflowButton(
-                  compact: false,
-                  completed: completed,
-                  postponed: postponed,
-                  colorScheme: colorScheme,
-                ),
-                metaContent: _buildPrimaryMetaRow(compact: false),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              _TaskCardPriorityBlock(
-                dueLabel: _dueSummaryLabel,
-                dueIcon: _dueIcon,
-                dueTone: overdue ? _TaskMetaTone.error : _dueTone,
-                reminderLabel: _reminderSummaryLabel(compact: false),
-                reminderIcon: _reminderIcon,
-                reminderTone: _reminderTone,
-                compact: false,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _TaskTertiaryMeta(
-                categoryLabel: task.category.label,
-                scheduleLabel: task.deadline != null ? _timeLabel : null,
-                compact: false,
-              ),
-              if (previewItems.isNotEmpty) ...<Widget>[
-                const SizedBox(height: AppSpacing.lg),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    ...previewItems.map(
-                      (TaskChecklistItem item) => _TaskSubtaskPreviewRow(
-                        key: Key('task-subtask-${task.id}-${item.id}'),
-                        item: item,
-                        onTap: () => onToggleSubtaskCompleted(item),
-                      ),
-                    ),
-                    if (hiddenItemsCount > 0) ...<Widget>[
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'Ещё $hiddenItemsCount',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ],
+              if (hiddenItemsCount > 0) ...<Widget>[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Ещё $hiddenItemsCount',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ],
           ),
-        ),
-      ),
+        ],
+      ],
     );
   }
 
-  Widget _buildCompactCard({
+  Widget _buildCompactContent({
     required BuildContext context,
     required TextTheme textTheme,
     required ColorScheme colorScheme,
     required bool completed,
     required bool overdue,
-    required bool postponed,
   }) {
-    return Opacity(
-      opacity: postponed ? 0.82 : 1,
-      child: AppSurfaceCard(
-        key: Key('task-card-${task.id}'),
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final bool showCategory = _shouldShowCategory(
-              compact: true,
-              availableWidth: constraints.maxWidth,
-            );
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool showCategory = constraints.maxWidth >= 260;
 
-            return Container(
-              key: Key('task-card-density-${density.name}-${task.id}'),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  key: Key('task-card-tile-${task.id}'),
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: onEdit,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      _TaskCardHeader(
-                        title: task.title,
-                        titleStyle: _titleStyle(
-                          textStyle: textTheme.titleMedium,
-                          colorScheme: colorScheme,
-                          completed: completed,
-                          overdue: overdue,
-                          lineHeight: 1.2,
-                        ),
-                        titleMaxLines: 2,
-                        titleBottomSpacing: AppSpacing.sm,
-                        completionButton: _buildCompletionButton(
-                          completed: completed,
-                          compact: true,
-                        ),
-                        overflowButton: _buildOverflowButton(
-                          compact: true,
-                          completed: completed,
-                          postponed: postponed,
-                          colorScheme: colorScheme,
-                        ),
-                        metaContent: _buildPrimaryMetaRow(compact: true),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      _TaskCardPriorityBlock(
-                        dueLabel: _dueSummaryLabel,
-                        dueIcon: _dueIcon,
-                        dueTone: overdue ? _TaskMetaTone.error : _dueTone,
-                        reminderLabel: _reminderSummaryLabel(compact: true),
-                        reminderIcon: _reminderIcon,
-                        reminderTone: _reminderTone,
-                        compact: true,
-                      ),
-                      if (showCategory) ...<Widget>[
-                        const Spacer(),
-                        _TaskTertiaryMeta(
-                          categoryLabel: task.category.label,
-                          scheduleLabel: task.deadline != null
-                              ? _timeLabel
-                              : null,
-                          compact: true,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            _TaskCardHeader(
+              title: task.title,
+              titleStyle: _titleStyle(
+                textStyle: textTheme.titleMedium,
+                colorScheme: colorScheme,
+                completed: completed,
+                overdue: overdue,
+                lineHeight: 1.2,
               ),
-            );
-          },
-        ),
-      ),
+              titleMaxLines: 2,
+              titleBottomSpacing: AppSpacing.sm,
+              completionButton: _buildCompletionButton(
+                completed: completed,
+                compact: true,
+              ),
+              overflowButton: _buildOverflowButton(
+                compact: true,
+                colorScheme: colorScheme,
+              ),
+              metaContent: _buildPrimaryMetaRow(compact: true),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _TaskCardPriorityBlock(
+              dueLabel: _dueSummaryLabel,
+              dueIcon: _dueIcon,
+              dueTone: overdue ? _TaskMetaTone.error : _dueTone,
+              reminderLabel: _reminderSummaryLabel(compact: true),
+              reminderIcon: _reminderIcon,
+              reminderTone: _reminderTone,
+              compact: true,
+            ),
+            if (showCategory) ...<Widget>[
+              const Spacer(),
+              _TaskTertiaryMeta(
+                categoryLabel: task.category.label,
+                scheduleLabel: task.deadline != null ? _timeLabel : null,
+                compact: true,
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 
@@ -283,55 +253,54 @@ class TaskCard extends StatelessWidget {
   }
 
   Widget _buildPrimaryMetaRow({required bool compact}) {
+    final List<Widget> chips = <Widget>[
+      Builder(
+        builder: (BuildContext chipContext) {
+          return InkWell(
+            key: Key('task-quadrant-button-${task.id}'),
+            borderRadius: BorderRadius.circular(999),
+            onTap: () => _showQuadrantPicker(chipContext),
+            child: _TaskMetaChip(
+              icon: _quadrantIcon(task.quadrant),
+              label: task.quadrant.label,
+              tone: _quadrantTone(task.quadrant),
+              compact: compact,
+            ),
+          );
+        },
+      ),
+    ];
+
+    if (task.totalSubtaskCount > 0) {
+      chips.add(
+        _TaskMetaChip(
+          icon: Icons.checklist_rounded,
+          label: '${task.completedSubtaskCount}/${task.totalSubtaskCount}',
+          compact: compact,
+        ),
+      );
+    }
+
+    if (task.isCompleted) {
+      chips.add(
+        _TaskMetaChip(
+          icon: Icons.done_all_rounded,
+          label: TaskStatus.completed.label,
+          tone: _TaskMetaTone.primary,
+          compact: compact,
+        ),
+      );
+    }
+
     return Wrap(
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
-      children: <Widget>[
-        Builder(
-          builder: (BuildContext chipContext) {
-            return InkWell(
-              key: Key('task-quadrant-button-${task.id}'),
-              borderRadius: BorderRadius.circular(999),
-              onTap: () => _showQuadrantPicker(chipContext),
-              child: _TaskMetaChip(
-                icon: _quadrantIcon(task.quadrant),
-                label: task.quadrant.label,
-                tone: _quadrantTone(task.quadrant),
-                compact: compact,
-              ),
-            );
-          },
-        ),
-        _TaskMetaChip(
-          icon: switch (task.status) {
-            TaskStatus.completed => Icons.done_all_rounded,
-            TaskStatus.postponed => Icons.pause_circle_outline_rounded,
-            TaskStatus.overdue => Icons.error_outline_rounded,
-            TaskStatus.pending => Icons.work_outline_rounded,
-          },
-          label: task.status.label,
-          tone: switch (task.status) {
-            TaskStatus.completed => _TaskMetaTone.primary,
-            TaskStatus.postponed => _TaskMetaTone.tertiary,
-            TaskStatus.overdue => _TaskMetaTone.error,
-            TaskStatus.pending => _TaskMetaTone.neutral,
-          },
-          compact: compact,
-        ),
-        if (task.totalSubtaskCount > 0)
-          _TaskMetaChip(
-            icon: Icons.checklist_rounded,
-            label: '${task.completedSubtaskCount}/${task.totalSubtaskCount}',
-            compact: compact,
-          ),
-      ],
+      children: chips,
     );
   }
 
   Widget _buildOverflowButton({
     required bool compact,
-    required bool completed,
-    required bool postponed,
     required ColorScheme colorScheme,
   }) {
     return PopupMenuButton<_TaskCardOverflowAction>(
@@ -344,8 +313,6 @@ class TaskCard extends StatelessWidget {
             onEdit();
           case _TaskCardOverflowAction.reschedule:
             onReschedule();
-          case _TaskCardOverflowAction.togglePostponed:
-            onTogglePostponed();
           case _TaskCardOverflowAction.delete:
             onDelete();
         }
@@ -366,16 +333,6 @@ class TaskCard extends StatelessWidget {
               label: 'Перенести',
             ),
           ),
-          if (!completed)
-            PopupMenuItem<_TaskCardOverflowAction>(
-              value: _TaskCardOverflowAction.togglePostponed,
-              child: _TaskOverflowMenuItem(
-                icon: postponed
-                    ? Icons.play_circle_outline_rounded
-                    : Icons.pause_circle_outline_rounded,
-                label: postponed ? 'Вернуть в работу' : 'Отложить',
-              ),
-            ),
           PopupMenuItem<_TaskCardOverflowAction>(
             value: _TaskCardOverflowAction.delete,
             child: _TaskOverflowMenuItem(
@@ -473,14 +430,6 @@ class TaskCard extends StatelessWidget {
     return task.reminderAt != null
         ? _TaskMetaTone.primary
         : _TaskMetaTone.neutral;
-  }
-
-  bool _shouldShowCategory({required bool compact, double? availableWidth}) {
-    if (!compact) {
-      return true;
-    }
-
-    return (availableWidth ?? 0) >= 260;
   }
 
   IconData _quadrantIcon(TaskQuadrant quadrant) {
@@ -581,6 +530,85 @@ class TaskCard extends StatelessWidget {
     if (selected != null) {
       onReclassify(selected);
     }
+  }
+}
+
+class _TaskInteractiveShell extends StatefulWidget {
+  const _TaskInteractiveShell({
+    required this.child,
+    required this.onTap,
+    required this.tileKey,
+    super.key,
+  });
+
+  final Widget child;
+  final VoidCallback onTap;
+  final Key tileKey;
+
+  @override
+  State<_TaskInteractiveShell> createState() => _TaskInteractiveShellState();
+}
+
+class _TaskInteractiveShellState extends State<_TaskInteractiveShell> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+    final bool isDark = theme.brightness == Brightness.dark;
+    final bool active = _hovered || _pressed;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: active
+              ? AppTheme.surfaceColor(context).withValues(alpha: 0.98)
+              : AppTheme.surfaceColor(context),
+          borderRadius: BorderRadius.circular(AppRadii.card),
+          border: Border.all(
+            color: active
+                ? colorScheme.primary.withValues(alpha: isDark ? 0.55 : 0.42)
+                : colorScheme.outlineVariant.withValues(alpha: 0.35),
+            width: active ? 1.35 : 1,
+          ),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: colorScheme.shadow.withValues(
+                alpha: active ? (isDark ? 0.18 : 0.08) : (isDark ? 0.14 : 0.06),
+              ),
+              blurRadius: active ? 18 : 14,
+              offset: Offset(0, active ? 8 : 6),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            key: widget.tileKey,
+            borderRadius: BorderRadius.circular(AppRadii.card),
+            onTap: widget.onTap,
+            onHighlightChanged: (bool value) {
+              if (_pressed != value && mounted) {
+                setState(() => _pressed = value);
+              }
+            },
+            splashColor: colorScheme.primary.withValues(alpha: 0.06),
+            highlightColor: colorScheme.primary.withValues(alpha: 0.03),
+            hoverColor: Colors.transparent,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: widget.child,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -904,4 +932,4 @@ class _TaskOverflowMenuItem extends StatelessWidget {
 
 enum _TaskMetaTone { neutral, primary, tertiary, error }
 
-enum _TaskCardOverflowAction { edit, reschedule, togglePostponed, delete }
+enum _TaskCardOverflowAction { edit, reschedule, delete }

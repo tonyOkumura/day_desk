@@ -286,13 +286,10 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.byKey(const Key('task-editor-status-dropdown')),
-      findsOneWidget,
-    );
-    expect(
       find.byKey(const Key('task-editor-reminder-preset-dropdown')),
       findsOneWidget,
     );
+    expect(find.byKey(const Key('task-editor-status-dropdown')), findsNothing);
   });
 
   testWidgets('на wide layout редактирование задачи открывается dialog', (
@@ -345,10 +342,7 @@ void main() {
       find.byKey(const Key('task-editor-deadline-button')),
       findsOneWidget,
     );
-    expect(
-      find.byKey(const Key('task-editor-status-dropdown')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('task-editor-status-dropdown')), findsNothing);
   });
 
   testWidgets(

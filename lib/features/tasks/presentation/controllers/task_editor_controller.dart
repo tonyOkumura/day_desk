@@ -42,7 +42,6 @@ class TaskEditorController {
        _subtasks = <TaskChecklistItem>[...?initialTask?.subtasks].obs,
        _category = (initialTask?.category ?? TaskCategory.other).obs,
        _isAllDay = (initialTask?.isAllDay ?? false).obs,
-       _status = (_normalizeEditorStatus(initialTask?.status)).obs,
        _saving = false.obs {
     _initialSnapshot = _snapshot;
   }
@@ -64,7 +63,6 @@ class TaskEditorController {
   final RxList<TaskChecklistItem> _subtasks;
   final Rx<TaskCategory> _category;
   final RxBool _isAllDay;
-  final Rx<TaskStatus> _status;
   final RxBool _saving;
   final RxnString _titleError = RxnString();
 
@@ -86,7 +84,6 @@ class TaskEditorController {
   TaskQuadrant get quadrant => _quadrant.value;
   List<TaskChecklistItem> get subtasks => _sortedSubtasks(_subtasks);
   TaskCategory get category => _category.value;
-  TaskStatus get status => _status.value;
   String? get titleError => _titleError.value;
   String get titleText => isEditing ? 'Редактировать задачу' : 'Новая задача';
   String get saveLabel => isEditing ? 'Сохранить' : 'Создать';
@@ -97,7 +94,6 @@ class TaskEditorController {
   String get startTimeLabel => _startTime.value == null
       ? 'Без времени'
       : _dateFormatter.formatTime(_startTime.value!);
-  List<TaskStatus> get editableStatuses => TaskStatus.editorValues;
   List<ReminderLeadTimePreset> get reminderPresetOptions =>
       ReminderLeadTimePreset.values;
   List<TaskQuadrant> get quadrantOptions =>
@@ -262,14 +258,6 @@ class TaskEditorController {
     _category.value = value;
   }
 
-  void updateStatus(TaskStatus value) {
-    if (!value.selectableInEditor) {
-      return;
-    }
-
-    _status.value = value;
-  }
-
   Future<Task?> save() async {
     final bool wasEditing = isEditing;
     final String trimmedTitle = _title.value.trim();
@@ -336,7 +324,6 @@ class TaskEditorController {
       subtasks: subtasks,
       category: _category.value,
       isAllDay: _isAllDay.value,
-      status: _status.value,
     );
   }
 
@@ -359,7 +346,7 @@ class TaskEditorController {
       isUrgent: _quadrant.value.isUrgent,
       isImportant: _quadrant.value.isImportant,
       subtasks: subtasks,
-      status: _status.value,
+      status: _persistedTask?.status ?? TaskStatus.pending,
       category: _category.value,
       isAllDay: _isAllDay.value,
       createdAt: createdAt ?? _persistedTask?.createdAt ?? DateTime.now(),
@@ -384,14 +371,6 @@ class TaskEditorController {
     }
 
     return null;
-  }
-
-  static TaskStatus _normalizeEditorStatus(TaskStatus? status) {
-    if (status == null || status == TaskStatus.overdue) {
-      return TaskStatus.pending;
-    }
-
-    return status;
   }
 
   static List<TaskChecklistItem> _sortedSubtasks(
@@ -428,7 +407,6 @@ class _TaskEditorSnapshot {
     required this.subtasks,
     required this.category,
     required this.isAllDay,
-    required this.status,
   });
 
   final String title;
@@ -441,7 +419,6 @@ class _TaskEditorSnapshot {
   final List<TaskChecklistItem> subtasks;
   final TaskCategory category;
   final bool isAllDay;
-  final TaskStatus status;
 
   @override
   bool operator ==(Object other) {
@@ -459,8 +436,7 @@ class _TaskEditorSnapshot {
         other.quadrant == quadrant &&
         listEquals(other.subtasks, subtasks) &&
         other.category == category &&
-        other.isAllDay == isAllDay &&
-        other.status == status;
+        other.isAllDay == isAllDay;
   }
 
   @override
@@ -475,6 +451,5 @@ class _TaskEditorSnapshot {
     Object.hashAll(subtasks),
     category,
     isAllDay,
-    status,
   );
 }

@@ -34,28 +34,24 @@ class TasksController extends GetxController {
   final Rx<TaskViewMode> _viewMode = TaskViewMode.matrix.obs;
   final Rx<TaskScopeMode> _scopeMode = TaskScopeMode.forDay.obs;
   final Rx<DateTime> _selectedDate;
-  final Rx<TaskStatusFilter> _statusFilter = TaskStatusFilter.active.obs;
   final Rx<TaskCategoryFilter> _categoryFilter = TaskCategoryFilter.all.obs;
   final Rx<TaskListSortOption> _listSortOption =
       TaskListSortOption.deadlineFirst.obs;
   final RxString _searchQuery = ''.obs;
   final RxMap<TaskQuadrant, bool> _compactQuadrantExpanded =
       <TaskQuadrant, bool>{
-        for (final TaskQuadrant quadrant in TaskQuadrant.values)
-          quadrant: true,
+        for (final TaskQuadrant quadrant in TaskQuadrant.values) quadrant: true,
       }.obs;
 
   StreamSubscription<List<Task>>? _subscription;
 
   List<TaskViewMode> get viewModes => TaskViewMode.values;
   List<TaskScopeMode> get scopeModes => TaskScopeMode.values;
-  List<TaskStatusFilter> get statusFilters => TaskStatusFilter.values;
   List<TaskCategoryFilter> get categoryFilters => TaskCategoryFilter.values;
   List<TaskListSortOption> get listSortOptions => TaskListSortOption.values;
   TaskViewMode get viewMode => _viewMode.value;
   TaskScopeMode get scopeMode => _scopeMode.value;
   DateTime get selectedDate => _selectedDate.value;
-  TaskStatusFilter get statusFilter => _statusFilter.value;
   TaskCategoryFilter get categoryFilter => _categoryFilter.value;
   TaskListSortOption get listSortOption => _listSortOption.value;
   String get searchQuery => _searchQuery.value;
@@ -68,7 +64,6 @@ class TasksController extends GetxController {
     final DateTime today = _dateFormatter.startOfDay(DateTime.now());
     return scopeMode != TaskScopeMode.forDay ||
         !_dateFormatter.isSameDay(selectedDate, today) ||
-        statusFilter != TaskStatusFilter.active ||
         categoryFilter != TaskCategoryFilter.all;
   }
 
@@ -136,10 +131,6 @@ class TasksController extends GetxController {
     }
   }
 
-  void selectStatusFilter(TaskStatusFilter filter) {
-    _statusFilter.value = filter;
-  }
-
   void selectCategoryFilter(TaskCategoryFilter filter) {
     _categoryFilter.value = filter;
   }
@@ -157,7 +148,6 @@ class TasksController extends GetxController {
   }
 
   Future<void> resetFilters() async {
-    _statusFilter.value = TaskStatusFilter.active;
     _categoryFilter.value = TaskCategoryFilter.all;
     _scopeMode.value = TaskScopeMode.forDay;
     _selectedDate.value = _dateFormatter.startOfDay(DateTime.now());
@@ -189,31 +179,6 @@ class TasksController extends GetxController {
       _notificationService.showError(
         title: 'Не удалось обновить задачу',
         message: 'Статус не изменился. Попробуй ещё раз.',
-      );
-    }
-  }
-
-  Future<void> toggleTaskPostponed(Task task) async {
-    if (task.status == TaskStatus.completed) {
-      return;
-    }
-
-    try {
-      await _repository.setTaskPostponed(
-        task.id,
-        postponed: task.status != TaskStatus.postponed,
-      );
-    } catch (error, stackTrace) {
-      _logger.error(
-        'Failed to toggle task postponed state.',
-        tag: 'TasksController',
-        context: <String, Object?>{'taskId': task.id},
-        error: error,
-        stackTrace: stackTrace,
-      );
-      _notificationService.showError(
-        title: 'Не удалось изменить статус задачи',
-        message: 'Попробуй ещё раз.',
       );
     }
   }
@@ -352,8 +317,7 @@ class TasksController extends GetxController {
 
   Iterable<Task> get _filteredTasks {
     return _tasks.where((Task task) {
-      return _matchesStatusFilter(task) &&
-          _categoryFilter.value.matches(task.category) &&
+      return _categoryFilter.value.matches(task.category) &&
           _matchesSearch(task);
     });
   }
@@ -371,17 +335,6 @@ class TasksController extends GetxController {
     return task.subtasks.any(
       (TaskChecklistItem item) => item.title.toLowerCase().contains(query),
     );
-  }
-
-  bool _matchesStatusFilter(Task task) {
-    return switch (statusFilter) {
-      TaskStatusFilter.active => task.status != TaskStatus.completed,
-      TaskStatusFilter.all => true,
-      TaskStatusFilter.pending => task.status == TaskStatus.pending,
-      TaskStatusFilter.postponed => task.status == TaskStatus.postponed,
-      TaskStatusFilter.overdue => task.status == TaskStatus.overdue,
-      TaskStatusFilter.completed => task.status == TaskStatus.completed,
-    };
   }
 
   void _handleLoadError(
@@ -405,7 +358,7 @@ class TasksController extends GetxController {
   }
 
   int _listComparator(Task a, Task b) {
-    final int byStatus = a.status.sortOrder.compareTo(b.status.sortOrder);
+    final int byStatus = _statusPriority(a).compareTo(_statusPriority(b));
     if (byStatus != 0) {
       return byStatus;
     }
@@ -418,7 +371,7 @@ class TasksController extends GetxController {
   }
 
   int _matrixComparator(Task a, Task b) {
-    final int byStatus = a.status.sortOrder.compareTo(b.status.sortOrder);
+    final int byStatus = _statusPriority(a).compareTo(_statusPriority(b));
     if (byStatus != 0) {
       return byStatus;
     }
@@ -467,6 +420,16 @@ class TasksController extends GetxController {
     return task.deadline ??
         task.startTime ??
         DateTime(task.date.year, task.date.month, task.date.day + 1);
+  }
+
+  int _statusPriority(Task task) {
+    if (task.isOverdue) {
+      return 0;
+    }
+    if (!task.isCompleted) {
+      return 1;
+    }
+    return 2;
   }
 }
 

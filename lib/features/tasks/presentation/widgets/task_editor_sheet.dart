@@ -15,7 +15,6 @@ import '../../domain/entities/task.dart';
 import '../../domain/entities/task_category.dart';
 import '../../domain/entities/task_checklist_item.dart';
 import '../../domain/entities/task_quadrant.dart';
-import '../../domain/entities/task_status.dart';
 import '../controllers/task_editor_controller.dart';
 
 class TaskEditorDialog extends StatefulWidget {
@@ -596,28 +595,6 @@ class _TaskEditorFormBodyState extends State<_TaskEditorFormBody> {
                       onChanged: (TaskCategory? value) {
                         if (value != null) {
                           widget.controller.updateCategory(value);
-                        }
-                      },
-                      width: compact ? double.infinity : 220,
-                    ),
-                    AppDropdownField<TaskStatus>(
-                      label: 'Статус',
-                      value: widget.controller.status,
-                      fieldKey: const Key('task-editor-status-dropdown'),
-                      items: widget.controller.editableStatuses
-                          .map(
-                            (TaskStatus value) => DropdownMenuItem<TaskStatus>(
-                              key: Key(
-                                'task-editor-status-option-${value.name}',
-                              ),
-                              value: value,
-                              child: Text(value.label),
-                            ),
-                          )
-                          .toList(growable: false),
-                      onChanged: (TaskStatus? value) {
-                        if (value != null) {
-                          widget.controller.updateStatus(value);
                         }
                       },
                       width: compact ? double.infinity : 220,

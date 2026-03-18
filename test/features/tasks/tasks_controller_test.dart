@@ -109,7 +109,7 @@ void main() {
   });
 
   test(
-    'TasksController фильтрует overdue и группирует задачи по квадрантам',
+    'TasksController показывает все задачи и сортирует overdue -> open -> completed',
     () async {
       final FakeTaskRepository repository = FakeTaskRepository(
         nowProvider: () => DateTime(2026, 3, 20, 12),
@@ -126,13 +126,6 @@ void main() {
             date: DateTime(2026, 3, 18),
             quadrant: TaskQuadrant.doNow,
             deadline: DateTime(2026, 3, 19, 18),
-          ),
-          _task(
-            id: 'postponed',
-            title: 'Отложенная задача',
-            date: DateTime(2026, 3, 18),
-            quadrant: TaskQuadrant.later,
-            status: TaskStatus.postponed,
           ),
           _task(
             id: 'completed',
@@ -154,7 +147,7 @@ void main() {
 
       expect(
         controller.visibleTasks.map((Task task) => task.id).toList(),
-        <String>['overdue', 'pending', 'postponed'],
+        <String>['overdue', 'pending', 'completed'],
       );
       expect(
         controller.matrixGroups
@@ -164,59 +157,52 @@ void main() {
             .id,
         'overdue',
       );
-
-      controller.selectStatusFilter(TaskStatusFilter.overdue);
-      expect(
-        controller.visibleTasks.map((Task task) => task.id).toList(),
-        <String>['overdue'],
-      );
-
-      controller.selectStatusFilter(TaskStatusFilter.completed);
-      expect(
-        controller.visibleTasks.map((Task task) => task.id).toList(),
-        <String>['completed'],
-      );
     },
   );
 
-  test('TasksController ищет по title и подпунктам и умеет reclassify', () async {
-    final FakeTaskRepository repository = FakeTaskRepository(
-      initialTasks: <Task>[
-        _task(
-          id: 'task-1',
-          title: 'Купить продукты',
-          date: DateTime.now(),
-          quadrant: TaskQuadrant.quickWins,
-          subtasks: const <TaskChecklistItem>[
-            TaskChecklistItem(id: 'sub-1', title: 'Молоко', sortOrder: 0),
-          ],
-        ),
-        _task(
-          id: 'task-2',
-          title: 'Подготовить отчёт',
-          date: DateTime.now(),
-          quadrant: TaskQuadrant.schedule,
-        ),
-      ],
-    );
-    final TasksController controller = TasksController(
-      repository: repository,
-      dateFormatter: AppDateFormatter(),
-      logger: AppLogger(),
-      notificationService: RecordingTaskNotificationService(),
-    );
+  test(
+    'TasksController ищет по title и подпунктам и умеет reclassify',
+    () async {
+      final FakeTaskRepository repository = FakeTaskRepository(
+        initialTasks: <Task>[
+          _task(
+            id: 'task-1',
+            title: 'Купить продукты',
+            date: DateTime.now(),
+            quadrant: TaskQuadrant.quickWins,
+            subtasks: const <TaskChecklistItem>[
+              TaskChecklistItem(id: 'sub-1', title: 'Молоко', sortOrder: 0),
+            ],
+          ),
+          _task(
+            id: 'task-2',
+            title: 'Подготовить отчёт',
+            date: DateTime.now(),
+            quadrant: TaskQuadrant.schedule,
+          ),
+        ],
+      );
+      final TasksController controller = TasksController(
+        repository: repository,
+        dateFormatter: AppDateFormatter(),
+        logger: AppLogger(),
+        notificationService: RecordingTaskNotificationService(),
+      );
 
-    controller.onInit();
-    await Future<void>.delayed(Duration.zero);
+      controller.onInit();
+      await Future<void>.delayed(Duration.zero);
 
-    controller.updateSearchQuery('молоко');
-    expect(controller.visibleTasks.map((Task task) => task.id), <String>['task-1']);
+      controller.updateSearchQuery('молоко');
+      expect(controller.visibleTasks.map((Task task) => task.id), <String>[
+        'task-1',
+      ]);
 
-    final Task created = (await repository.getAllTasks()).first;
-    await controller.reclassifyTask(created, TaskQuadrant.doNow);
-    final Task reclassified = (await repository.getAllTasks()).first;
-    expect(reclassified.quadrant, TaskQuadrant.doNow);
-  });
+      final Task created = (await repository.getAllTasks()).first;
+      await controller.reclassifyTask(created, TaskQuadrant.doNow);
+      final Task reclassified = (await repository.getAllTasks()).first;
+      expect(reclassified.quadrant, TaskQuadrant.doNow);
+    },
+  );
 
   test(
     'TasksController переводит экран в error state при ошибке загрузки',

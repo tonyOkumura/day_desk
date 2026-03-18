@@ -24,6 +24,7 @@ class Task {
     this.isAllDay = false,
     required this.createdAt,
     required this.updatedAt,
+    this.evaluationTime,
   }) : assert(
          !isAllDay || (startTime == null && durationMinutes == null),
          'All-day tasks cannot have start time or duration.',
@@ -52,10 +53,10 @@ class Task {
   final bool isAllDay;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? evaluationTime;
 
   bool get isCompleted => status == TaskStatus.completed;
-  bool get isPostponed => status == TaskStatus.postponed;
-  bool get isOverdue => status == TaskStatus.overdue;
+  bool get isOverdue => isOverdueAt(reference: evaluationTime);
   bool get hasReminderPreset => reminderPreset.hasReminder;
   TaskQuadrant get quadrant =>
       TaskQuadrant.fromFlags(isUrgent: isUrgent, isImportant: isImportant);
@@ -100,33 +101,12 @@ class Task {
   }
 
   bool isOverdueAt({DateTime? reference}) {
-    if (status != TaskStatus.pending) {
+    if (isCompleted) {
       return false;
     }
 
     final DateTime resolvedReference = reference ?? DateTime.now();
     return !resolvedReference.isBefore(overdueCutoff);
-  }
-
-  TaskStatus resolveEffectiveStatus({DateTime? reference}) {
-    if (status != TaskStatus.pending) {
-      return status;
-    }
-
-    return isOverdueAt(reference: reference)
-        ? TaskStatus.overdue
-        : TaskStatus.pending;
-  }
-
-  Task withEffectiveStatus({DateTime? reference}) {
-    final TaskStatus effectiveStatus = resolveEffectiveStatus(
-      reference: reference,
-    );
-    if (effectiveStatus == status) {
-      return this;
-    }
-
-    return copyWith(status: effectiveStatus);
   }
 
   Task withResolvedReminderSchedule() {
@@ -139,24 +119,21 @@ class Task {
   }
 
   Task normalizedForPersistence() {
-    final TaskStatus normalizedStatus = status == TaskStatus.overdue
-        ? TaskStatus.pending
-        : status;
     final DateTime? normalizedReminderAt = resolvedReminderAt;
     final List<TaskChecklistItem> normalizedSubtasks = _normalizeSubtasks(
       subtasks,
     );
 
-    if (normalizedStatus == status &&
-        normalizedReminderAt == reminderAt &&
+    if (normalizedReminderAt == reminderAt &&
+        evaluationTime == null &&
         _subtasksEqual(normalizedSubtasks, subtasks)) {
       return this;
     }
 
     return copyWith(
-      status: normalizedStatus,
       reminderAt: normalizedReminderAt,
       subtasks: normalizedSubtasks,
+      evaluationTime: null,
     );
   }
 
@@ -177,6 +154,7 @@ class Task {
     bool? isAllDay,
     DateTime? createdAt,
     DateTime? updatedAt,
+    Object? evaluationTime = _taskUnset,
   }) {
     return Task(
       id: id ?? this.id,
@@ -207,6 +185,9 @@ class Task {
       isAllDay: isAllDay ?? this.isAllDay,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      evaluationTime: identical(evaluationTime, _taskUnset)
+          ? this.evaluationTime
+          : evaluationTime as DateTime?,
     );
   }
 

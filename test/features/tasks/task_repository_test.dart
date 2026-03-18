@@ -150,54 +150,41 @@ void main() {
       await context.repository.createTask(task);
 
       final Task loaded = (await context.repository.getAllTasks()).single;
-      expect(loaded.status, TaskStatus.overdue);
+      expect(loaded.status, TaskStatus.pending);
+      expect(loaded.isOverdue, isTrue);
       expect(loaded.reminderAt, DateTime(2026, 3, 19, 17));
 
       final TaskLocalModel stored =
           (await context.dataSource.readAllTasks()).single;
-      expect(stored.status, TaskStatus.pending);
+      expect(stored.status, 'pending');
       expect(stored.reminderPreset, ReminderLeadTimePreset.hour1);
     });
 
-    test(
-      'setTaskPostponed сохраняет ручной postponed и не auto-converts',
-      () async {
-        final _TaskRepoTestContext context = await _openContext(
-          nowProvider: () => DateTime(2026, 3, 20, 12),
-        );
-        addTearDown(context.dispose);
+    test('completed task never materializes as overdue', () async {
+      final _TaskRepoTestContext context = await _openContext(
+        nowProvider: () => DateTime(2026, 3, 20, 12),
+      );
+      addTearDown(context.dispose);
 
-        final Task task = Task(
-          id: 'task-postponed',
-          title: 'Перезвонить спикеру',
-          date: DateTime(2026, 3, 18),
-          deadline: DateTime(2026, 3, 19, 9),
-          reminderPreset: ReminderLeadTimePreset.minutes15,
-          status: TaskStatus.pending,
-          category: TaskCategory.call,
-          createdAt: DateTime(2026, 3, 18, 8),
-          updatedAt: DateTime(2026, 3, 18, 8),
-        );
+      final Task task = Task(
+        id: 'task-completed',
+        title: 'Отправить договор',
+        date: DateTime(2026, 3, 18),
+        deadline: DateTime(2026, 3, 19, 9),
+        reminderPreset: ReminderLeadTimePreset.minutes15,
+        status: TaskStatus.completed,
+        category: TaskCategory.call,
+        createdAt: DateTime(2026, 3, 18, 8),
+        updatedAt: DateTime(2026, 3, 18, 8),
+      );
 
-        await context.repository.createTask(task);
-        await context.repository.setTaskPostponed(
-          'task-postponed',
-          postponed: true,
-        );
+      await context.repository.createTask(task);
 
-        final Task postponed = (await context.repository.getAllTasks()).single;
-        expect(postponed.status, TaskStatus.postponed);
-        expect(postponed.reminderAt, DateTime(2026, 3, 19, 8, 45));
-
-        await context.repository.setTaskPostponed(
-          'task-postponed',
-          postponed: false,
-        );
-
-        final Task restored = (await context.repository.getAllTasks()).single;
-        expect(restored.status, TaskStatus.overdue);
-      },
-    );
+      final Task loaded = (await context.repository.getAllTasks()).single;
+      expect(loaded.status, TaskStatus.completed);
+      expect(loaded.isOverdue, isFalse);
+      expect(loaded.reminderAt, DateTime(2026, 3, 19, 8, 45));
+    });
   });
 }
 

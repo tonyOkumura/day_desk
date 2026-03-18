@@ -78,7 +78,6 @@ const TaskLocalModelSchema = CollectionSchema(
       id: 11,
       name: r'status',
       type: IsarType.string,
-      enumMap: _TaskLocalModelstatusEnumValueMap,
     ),
     r'subtasks': PropertySchema(
       id: 12,
@@ -133,6 +132,19 @@ const TaskLocalModelSchema = CollectionSchema(
           caseSensitive: false,
         )
       ],
+    ),
+    r'status': IndexSchema(
+      id: -107785170620420283,
+      name: r'status',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'status',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
     )
   },
   links: {},
@@ -153,7 +165,7 @@ int _taskLocalModelEstimateSize(
   var bytesCount = offsets.last;
   bytesCount += 3 + object.category.name.length * 3;
   bytesCount += 3 + object.reminderPreset.name.length * 3;
-  bytesCount += 3 + object.status.name.length * 3;
+  bytesCount += 3 + object.status.length * 3;
   bytesCount += 3 + object.subtasks.length * 3;
   {
     final offsets = allOffsets[TaskChecklistItemLocalModel]!;
@@ -185,7 +197,7 @@ void _taskLocalModelSerialize(
   writer.writeDateTime(offsets[8], object.reminderAt);
   writer.writeString(offsets[9], object.reminderPreset.name);
   writer.writeDateTime(offsets[10], object.startTime);
-  writer.writeString(offsets[11], object.status.name);
+  writer.writeString(offsets[11], object.status);
   writer.writeObjectList<TaskChecklistItemLocalModel>(
     offsets[12],
     allOffsets,
@@ -220,9 +232,7 @@ TaskLocalModel _taskLocalModelDeserialize(
           reader.readStringOrNull(offsets[9])] ??
       ReminderLeadTimePreset.none;
   object.startTime = reader.readDateTimeOrNull(offsets[10]);
-  object.status =
-      _TaskLocalModelstatusValueEnumMap[reader.readStringOrNull(offsets[11])] ??
-          TaskStatus.pending;
+  object.status = reader.readString(offsets[11]);
   object.subtasks = reader.readObjectList<TaskChecklistItemLocalModel>(
         offsets[12],
         TaskChecklistItemLocalModelSchema.deserialize,
@@ -270,9 +280,7 @@ P _taskLocalModelDeserializeProp<P>(
     case 10:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 11:
-      return (_TaskLocalModelstatusValueEnumMap[
-              reader.readStringOrNull(offset)] ??
-          TaskStatus.pending) as P;
+      return (reader.readString(offset)) as P;
     case 12:
       return (reader.readObjectList<TaskChecklistItemLocalModel>(
             offset,
@@ -319,18 +327,6 @@ const _TaskLocalModelreminderPresetValueEnumMap = {
   r'minutes15': ReminderLeadTimePreset.minutes15,
   r'hour1': ReminderLeadTimePreset.hour1,
   r'day1': ReminderLeadTimePreset.day1,
-};
-const _TaskLocalModelstatusEnumValueMap = {
-  r'pending': r'pending',
-  r'postponed': r'postponed',
-  r'completed': r'completed',
-  r'overdue': r'overdue',
-};
-const _TaskLocalModelstatusValueEnumMap = {
-  r'pending': TaskStatus.pending,
-  r'postponed': TaskStatus.postponed,
-  r'completed': TaskStatus.completed,
-  r'overdue': TaskStatus.overdue,
 };
 
 Id _taskLocalModelGetId(TaskLocalModel object) {
@@ -620,6 +616,51 @@ extension TaskLocalModelQueryWhere
         upper: [upperDate],
         includeUpper: includeUpper,
       ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterWhereClause> statusEqualTo(
+      String status) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'status',
+        value: [status],
+      ));
+    });
+  }
+
+  QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterWhereClause>
+      statusNotEqualTo(String status) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'status',
+              lower: [],
+              upper: [status],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'status',
+              lower: [status],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'status',
+              lower: [status],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'status',
+              lower: [],
+              upper: [status],
+              includeUpper: false,
+            ));
+      }
     });
   }
 }
@@ -1394,7 +1435,7 @@ extension TaskLocalModelQueryFilter
 
   QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
       statusEqualTo(
-    TaskStatus value, {
+    String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -1408,7 +1449,7 @@ extension TaskLocalModelQueryFilter
 
   QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
       statusGreaterThan(
-    TaskStatus value, {
+    String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -1424,7 +1465,7 @@ extension TaskLocalModelQueryFilter
 
   QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
       statusLessThan(
-    TaskStatus value, {
+    String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -1440,8 +1481,8 @@ extension TaskLocalModelQueryFilter
 
   QueryBuilder<TaskLocalModel, TaskLocalModel, QAfterFilterCondition>
       statusBetween(
-    TaskStatus lower,
-    TaskStatus upper, {
+    String lower,
+    String upper, {
     bool includeLower = true,
     bool includeUpper = true,
     bool caseSensitive = true,
@@ -2556,7 +2597,7 @@ extension TaskLocalModelQueryProperty
     });
   }
 
-  QueryBuilder<TaskLocalModel, TaskStatus, QQueryOperations> statusProperty() {
+  QueryBuilder<TaskLocalModel, String, QQueryOperations> statusProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'status');
     });

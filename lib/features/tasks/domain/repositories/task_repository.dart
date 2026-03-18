@@ -18,8 +18,6 @@ abstract interface class TaskRepository {
 
   Future<void> markTaskCompleted(String taskId, {required bool completed});
 
-  Future<void> setTaskPostponed(String taskId, {required bool postponed});
-
   Future<void> updateTaskQuadrant(
     String taskId, {
     required TaskQuadrant quadrant,

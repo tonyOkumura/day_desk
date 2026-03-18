@@ -95,21 +95,6 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
-  Future<void> setTaskPostponed(
-    String taskId, {
-    required bool postponed,
-  }) async {
-    final Task existing = await _requireStoredTask(taskId);
-
-    await updateTask(
-      existing.copyWith(
-        status: postponed ? TaskStatus.postponed : TaskStatus.pending,
-        updatedAt: _nowProvider(),
-      ),
-    );
-  }
-
-  @override
   Future<void> updateTaskQuadrant(
     String taskId, {
     required TaskQuadrant quadrant,
@@ -191,8 +176,8 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   Task _materializeTask(Task task) {
-    return task.withResolvedReminderSchedule().withEffectiveStatus(
-      reference: _nowProvider(),
+    return task.withResolvedReminderSchedule().copyWith(
+      evaluationTime: _nowProvider(),
     );
   }
 

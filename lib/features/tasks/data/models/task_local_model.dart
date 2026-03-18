@@ -66,8 +66,8 @@ class TaskLocalModel {
 
   List<TaskChecklistItemLocalModel> subtasks = <TaskChecklistItemLocalModel>[];
 
-  @Enumerated(EnumType.name)
-  TaskStatus status = TaskStatus.pending;
+  @Index()
+  String status = 'pending';
 
   @Enumerated(EnumType.name)
   TaskCategory category = TaskCategory.other;
@@ -93,7 +93,7 @@ class TaskLocalModel {
       subtasks: subtasks
           .map((TaskChecklistItemLocalModel item) => item.toEntity())
           .toList(growable: false),
-      status: status,
+      status: _statusFromStorage(status),
       category: category,
       isAllDay: isAllDay,
       createdAt: createdAt,
@@ -118,10 +118,18 @@ class TaskLocalModel {
       ..subtasks = normalizedTask.subtasks
           .map(TaskChecklistItemLocalModel.fromEntity)
           .toList(growable: false)
-      ..status = normalizedTask.status
+      ..status = normalizedTask.status.name
       ..category = normalizedTask.category
       ..isAllDay = normalizedTask.isAllDay
       ..createdAt = normalizedTask.createdAt
       ..updatedAt = normalizedTask.updatedAt;
+  }
+
+  static TaskStatus _statusFromStorage(String value) {
+    return switch (value) {
+      'completed' => TaskStatus.completed,
+      'postponed' || 'overdue' || 'pending' => TaskStatus.pending,
+      _ => TaskStatus.pending,
+    };
   }
 }

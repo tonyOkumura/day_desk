@@ -41,9 +41,8 @@ class TasksContentPage extends GetView<TasksController> {
           return LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               return Obx(() {
-                final _TaskMatrixLayoutMode matrixLayout = _matrixLayoutForWidth(
-                  constraints.maxWidth,
-                );
+                final _TaskMatrixLayoutMode matrixLayout =
+                    _matrixLayoutForWidth(constraints.maxWidth);
                 final List<Task> tasks = controller.visibleTasks;
                 final List<TaskQuadrantGroup> groups = controller.matrixGroups;
 
@@ -401,44 +400,49 @@ class _WideQuadrantSection extends StatelessWidget {
         }
         controller.reclassifyTask(details.data, group.quadrant);
       },
-      builder: (
-        BuildContext context,
-        List<Task?> candidateData,
-        List<dynamic> rejectedData,
-      ) {
-        final bool isHighlighted = candidateData.isNotEmpty;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          height: double.infinity,
-          padding: EdgeInsets.all(isHighlighted ? AppSpacing.xs : 0),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadii.card + AppSpacing.xs),
-            color: isHighlighted
-                ? Theme.of(
-                    context,
-                  ).colorScheme.primaryContainer.withValues(alpha: 0.24)
-                : Colors.transparent,
-            border: Border.all(
-              color: isHighlighted
-                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.22)
-                  : Colors.transparent,
-            ),
-          ),
-          child: AppSurfaceCard(
-            key: Key('task-matrix-group-${group.quadrant.name}'),
-            child: _QuadrantSectionBody(
-              group: group,
-              dense: dense,
-              controller: controller,
-              enableDrag: true,
-              onOpenEditor: onOpenEditor,
-              onConfirmDelete: onConfirmDelete,
-              onReschedule: onReschedule,
-            ),
-          ),
-        );
-      },
+      builder:
+          (
+            BuildContext context,
+            List<Task?> candidateData,
+            List<dynamic> rejectedData,
+          ) {
+            final bool isHighlighted = candidateData.isNotEmpty;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              height: double.infinity,
+              padding: EdgeInsets.all(isHighlighted ? AppSpacing.xs : 0),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(
+                  AppRadii.card + AppSpacing.xs,
+                ),
+                color: isHighlighted
+                    ? Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer.withValues(alpha: 0.24)
+                    : Colors.transparent,
+                border: Border.all(
+                  color: isHighlighted
+                      ? Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.22)
+                      : Colors.transparent,
+                ),
+              ),
+              child: AppSurfaceCard(
+                key: Key('task-matrix-group-${group.quadrant.name}'),
+                child: _QuadrantSectionBody(
+                  group: group,
+                  dense: dense,
+                  controller: controller,
+                  enableDrag: true,
+                  onOpenEditor: onOpenEditor,
+                  onConfirmDelete: onConfirmDelete,
+                  onReschedule: onReschedule,
+                ),
+              ),
+            );
+          },
     );
   }
 }
@@ -772,7 +776,6 @@ class _TaskCardHost extends StatelessWidget {
       density: density,
       dateFormatter: Get.find<AppDateFormatter>(),
       onToggleCompleted: () => controller.toggleTaskCompletion(task),
-      onTogglePostponed: () => controller.toggleTaskPostponed(task),
       onEdit: () => onOpenEditor(task),
       onDelete: () => onConfirmDelete(task),
       onReschedule: () => onReschedule(task),
@@ -801,10 +804,7 @@ class _TaskCardHost extends StatelessWidget {
         opacity: 0.36,
         child: IgnorePointer(child: card),
       ),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.grab,
-        child: card,
-      ),
+      child: MouseRegion(cursor: SystemMouseCursors.grab, child: card),
     );
   }
 }
