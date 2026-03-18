@@ -9,47 +9,64 @@ abstract final class AppTypography {
     final TextTheme base = brightness == Brightness.dark
         ? ThemeData.dark(useMaterial3: true).textTheme
         : ThemeData.light(useMaterial3: true).textTheme;
-    final TextTheme displayTextTheme = _withFamily(base, displayFamily);
-    final TextTheme bodyTextTheme = _withFamily(base, bodyFamily);
-
-    return displayTextTheme.copyWith(
-      bodyLarge: bodyTextTheme.bodyLarge,
-      bodyMedium: bodyTextTheme.bodyMedium,
-      bodySmall: bodyTextTheme.bodySmall,
-      labelLarge: bodyTextTheme.labelLarge,
-      labelMedium: bodyTextTheme.labelMedium,
-      labelSmall: bodyTextTheme.labelSmall,
-      titleSmall: bodyTextTheme.titleSmall,
-      titleMedium: bodyTextTheme.titleMedium,
+    return base.copyWith(
+      displayLarge: _display(base.displayLarge, FontWeight.w800, -1.1),
+      displayMedium: _display(base.displayMedium, FontWeight.w800, -0.8),
+      displaySmall: _display(base.displaySmall, FontWeight.w700, -0.5),
+      headlineLarge: _display(base.headlineLarge, FontWeight.w700, -0.55),
+      headlineMedium: _display(base.headlineMedium, FontWeight.w700, -0.35),
+      headlineSmall: _display(base.headlineSmall, FontWeight.w700, -0.18),
+      titleLarge: _display(base.titleLarge, FontWeight.w700, -0.08),
+      titleMedium: _body(base.titleMedium, FontWeight.w700, 0.06),
+      titleSmall: _body(base.titleSmall, FontWeight.w700, 0.1),
+      bodyLarge: _body(base.bodyLarge, FontWeight.w400, 0.08, height: 1.45),
+      bodyMedium: _body(base.bodyMedium, FontWeight.w400, 0.06, height: 1.42),
+      bodySmall: _body(base.bodySmall, FontWeight.w400, 0.08, height: 1.35),
+      labelLarge: _body(base.labelLarge, FontWeight.w700, 0.12),
+      labelMedium: _body(base.labelMedium, FontWeight.w600, 0.16),
+      labelSmall: _body(base.labelSmall, FontWeight.w600, 0.18),
     );
   }
 
-  static TextStyle mono(BuildContext context) {
-    return (Theme.of(context).textTheme.bodyMedium ?? const TextStyle())
+  static TextStyle meta(BuildContext context) {
+    return (Theme.of(context).textTheme.labelMedium ?? const TextStyle())
         .copyWith(
-          fontFamily: monoFamily,
+          fontFamily: bodyFamily,
+          fontWeight: FontWeight.w600,
           letterSpacing: 0.24,
+          height: 1.2,
           fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
         );
   }
 
-  static TextTheme _withFamily(TextTheme textTheme, String fontFamily) {
-    return textTheme.copyWith(
-      displayLarge: textTheme.displayLarge?.copyWith(fontFamily: fontFamily),
-      displayMedium: textTheme.displayMedium?.copyWith(fontFamily: fontFamily),
-      displaySmall: textTheme.displaySmall?.copyWith(fontFamily: fontFamily),
-      headlineLarge: textTheme.headlineLarge?.copyWith(fontFamily: fontFamily),
-      headlineMedium: textTheme.headlineMedium?.copyWith(fontFamily: fontFamily),
-      headlineSmall: textTheme.headlineSmall?.copyWith(fontFamily: fontFamily),
-      titleLarge: textTheme.titleLarge?.copyWith(fontFamily: fontFamily),
-      titleMedium: textTheme.titleMedium?.copyWith(fontFamily: fontFamily),
-      titleSmall: textTheme.titleSmall?.copyWith(fontFamily: fontFamily),
-      bodyLarge: textTheme.bodyLarge?.copyWith(fontFamily: fontFamily),
-      bodyMedium: textTheme.bodyMedium?.copyWith(fontFamily: fontFamily),
-      bodySmall: textTheme.bodySmall?.copyWith(fontFamily: fontFamily),
-      labelLarge: textTheme.labelLarge?.copyWith(fontFamily: fontFamily),
-      labelMedium: textTheme.labelMedium?.copyWith(fontFamily: fontFamily),
-      labelSmall: textTheme.labelSmall?.copyWith(fontFamily: fontFamily),
+  static TextStyle mono(BuildContext context) {
+    return meta(context).copyWith(fontFamily: monoFamily);
+  }
+
+  static TextStyle? _display(
+    TextStyle? style,
+    FontWeight weight,
+    double letterSpacing,
+  ) {
+    return style?.copyWith(
+      fontFamily: displayFamily,
+      fontWeight: weight,
+      letterSpacing: letterSpacing,
+      height: 1.08,
+    );
+  }
+
+  static TextStyle? _body(
+    TextStyle? style,
+    FontWeight weight,
+    double letterSpacing, {
+    double? height,
+  }) {
+    return style?.copyWith(
+      fontFamily: bodyFamily,
+      fontWeight: weight,
+      letterSpacing: letterSpacing,
+      height: height,
     );
   }
 }

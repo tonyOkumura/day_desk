@@ -29,107 +29,120 @@ class TasksContentPage extends GetView<TasksController> {
 
   @override
   Widget build(BuildContext context) {
-    return PageContentFrame(
-      storageKey: AppDestination.tasks.pageStorageKey,
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          final _TaskMatrixLayoutMode matrixLayout = _matrixLayoutForWidth(
-            constraints.maxWidth,
+    return Obx(() {
+      final bool matrixMode = controller.viewMode == TaskViewMode.matrix;
+
+      return PageContentFrame(
+        storageKey: AppDestination.tasks.pageStorageKey,
+        widthPolicy: matrixMode
+            ? PageContentWidthPolicy.fluid
+            : PageContentWidthPolicy.standard,
+        builder: (BuildContext context, PageContentLayout frame) {
+          return LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              return Obx(() {
+                final _TaskMatrixLayoutMode matrixLayout = _matrixLayoutForWidth(
+                  constraints.maxWidth,
+                );
+                final List<Task> tasks = controller.visibleTasks;
+                final List<TaskQuadrantGroup> groups = controller.matrixGroups;
+
+                if (controller.isLoading) {
+                  return const Center(
+                    key: Key('tasks-state-loading'),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+                      child: AppLoadingState(
+                        title: 'Собираем матрицу задач',
+                        message:
+                            'Поднимаем локальный список и готовим квадранты на день.',
+                      ),
+                    ),
+                  );
+                }
+
+                if (controller.hasError) {
+                  return Center(
+                    key: const Key('tasks-state-error'),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.xxl,
+                      ),
+                      child: AppErrorState(
+                        title: 'Модуль задач недоступен',
+                        message:
+                            controller.errorMessage ??
+                            'Попробуй обновить экран ещё раз.',
+                        actionLabel: 'Повторить',
+                        onAction: controller.retryLoading,
+                      ),
+                    ),
+                  );
+                }
+
+                if (tasks.isEmpty) {
+                  return Center(
+                    key: const Key('tasks-state-empty'),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.xxl,
+                      ),
+                      child: AppEmptyState(
+                        title: controller.hasSourceTasks
+                            ? 'Под текущий фильтр задач нет'
+                            : 'Матрица пока пустая',
+                        message: controller.hasSourceTasks
+                            ? 'Сбрось фильтры, смени запрос или открой другой режим просмотра.'
+                            : 'Создай первую задачу через кнопку плюс в верхней панели.',
+                        actionLabel: 'Открыть редактор',
+                        onAction: () => _openTaskEditor(context),
+                      ),
+                    ),
+                  );
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    if (matrixMode)
+                      _TaskMatrixBoard(
+                        controller: controller,
+                        groups: groups,
+                        layout: matrixLayout,
+                        availableHeight: frame.contentHeight,
+                        onOpenEditor: (Task task) =>
+                            _openTaskEditor(context, task: task),
+                        onConfirmDelete: (Task task) =>
+                            _confirmDeleteTask(context, task),
+                        onReschedule: (Task task) =>
+                            _pickRescheduleDate(context, task),
+                      )
+                    else
+                      _TaskListBoard(
+                        controller: controller,
+                        tasks: tasks,
+                        onOpenEditor: (Task task) =>
+                            _openTaskEditor(context, task: task),
+                        onConfirmDelete: (Task task) =>
+                            _confirmDeleteTask(context, task),
+                        onReschedule: (Task task) =>
+                            _pickRescheduleDate(context, task),
+                      ),
+                  ],
+                );
+              });
+            },
           );
-
-          return Obx(() {
-            final List<Task> tasks = controller.visibleTasks;
-            final List<TaskQuadrantGroup> groups = controller.matrixGroups;
-
-            if (controller.isLoading) {
-              return const Center(
-                key: Key('tasks-state-loading'),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
-                  child: AppLoadingState(
-                    title: 'Собираем матрицу задач',
-                    message:
-                        'Поднимаем локальный список и готовим квадранты на день.',
-                  ),
-                ),
-              );
-            }
-
-            if (controller.hasError) {
-              return Center(
-                key: const Key('tasks-state-error'),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
-                  child: AppErrorState(
-                    title: 'Модуль задач недоступен',
-                    message:
-                        controller.errorMessage ??
-                        'Попробуй обновить экран ещё раз.',
-                    actionLabel: 'Повторить',
-                    onAction: controller.retryLoading,
-                  ),
-                ),
-              );
-            }
-
-            if (tasks.isEmpty) {
-              return Center(
-                key: const Key('tasks-state-empty'),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
-                  child: AppEmptyState(
-                    title: controller.hasSourceTasks
-                        ? 'Под текущий фильтр задач нет'
-                        : 'Матрица пока пустая',
-                    message: controller.hasSourceTasks
-                        ? 'Сбрось фильтры, смени запрос или открой другой режим просмотра.'
-                        : 'Создай первую задачу через кнопку плюс в верхней панели.',
-                    actionLabel: 'Открыть редактор',
-                    onAction: () => _openTaskEditor(context),
-                  ),
-                ),
-              );
-            }
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                if (controller.viewMode == TaskViewMode.matrix)
-                  _TaskMatrixBoard(
-                    controller: controller,
-                    groups: groups,
-                    layout: matrixLayout,
-                    onOpenEditor: (Task task) =>
-                        _openTaskEditor(context, task: task),
-                    onConfirmDelete: (Task task) =>
-                        _confirmDeleteTask(context, task),
-                    onReschedule: (Task task) =>
-                        _pickRescheduleDate(context, task),
-                  )
-                else
-                  _TaskListBoard(
-                    controller: controller,
-                    tasks: tasks,
-                    onOpenEditor: (Task task) =>
-                        _openTaskEditor(context, task: task),
-                    onConfirmDelete: (Task task) =>
-                        _confirmDeleteTask(context, task),
-                    onReschedule: (Task task) =>
-                        _pickRescheduleDate(context, task),
-                  ),
-              ],
-            );
-          });
         },
-      ),
-    );
+      );
+    });
   }
 
   _TaskMatrixLayoutMode _matrixLayoutForWidth(double width) {
     if (width < AppBreakpoints.compactNavigation) {
       return _TaskMatrixLayoutMode.compact;
     }
-    if (width < AppBreakpoints.pageMaxWidth) {
+    if (width < AppBreakpoints.wideMatrixBoard) {
       return _TaskMatrixLayoutMode.medium;
     }
     return _TaskMatrixLayoutMode.wide;
@@ -178,6 +191,7 @@ class _TaskMatrixBoard extends StatelessWidget {
     required this.controller,
     required this.groups,
     required this.layout,
+    required this.availableHeight,
     required this.onOpenEditor,
     required this.onConfirmDelete,
     required this.onReschedule,
@@ -186,6 +200,7 @@ class _TaskMatrixBoard extends StatelessWidget {
   final TasksController controller;
   final List<TaskQuadrantGroup> groups;
   final _TaskMatrixLayoutMode layout;
+  final double availableHeight;
   final ValueChanged<Task> onOpenEditor;
   final ValueChanged<Task> onConfirmDelete;
   final ValueChanged<Task> onReschedule;
@@ -230,76 +245,77 @@ class _TaskMatrixBoard extends StatelessWidget {
     final TaskQuadrantGroup later = groups.firstWhere(
       (TaskQuadrantGroup group) => group.quadrant == TaskQuadrant.later,
     );
+    final double boardGap = layout == _TaskMatrixLayoutMode.medium
+        ? AppSpacing.lg
+        : AppSpacing.xl;
+    final double boardHeight = availableHeight
+        .clamp(560.0, layout == _TaskMatrixLayoutMode.medium ? 820.0 : 920.0)
+        .toDouble();
 
-    return Column(
+    return SizedBox(
       key: Key('tasks-matrix-${layout.name}'),
-      children: <Widget>[
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              child: _WideQuadrantSection(
-                group: doNow,
-                dense: layout == _TaskMatrixLayoutMode.medium,
-                controller: controller,
-                onOpenEditor: onOpenEditor,
-                onConfirmDelete: onConfirmDelete,
-                onReschedule: onReschedule,
-              ),
+      height: boardHeight,
+      child: Column(
+        children: <Widget>[
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Expanded(
+                  child: _WideQuadrantSection(
+                    group: doNow,
+                    dense: layout == _TaskMatrixLayoutMode.medium,
+                    controller: controller,
+                    onOpenEditor: onOpenEditor,
+                    onConfirmDelete: onConfirmDelete,
+                    onReschedule: onReschedule,
+                  ),
+                ),
+                SizedBox(width: boardGap),
+                Expanded(
+                  child: _WideQuadrantSection(
+                    group: schedule,
+                    dense: layout == _TaskMatrixLayoutMode.medium,
+                    controller: controller,
+                    onOpenEditor: onOpenEditor,
+                    onConfirmDelete: onConfirmDelete,
+                    onReschedule: onReschedule,
+                  ),
+                ),
+              ],
             ),
-            SizedBox(
-              width: layout == _TaskMatrixLayoutMode.medium
-                  ? AppSpacing.lg
-                  : AppSpacing.xl,
+          ),
+          SizedBox(height: boardGap),
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Expanded(
+                  child: _WideQuadrantSection(
+                    group: quickWins,
+                    dense: layout == _TaskMatrixLayoutMode.medium,
+                    controller: controller,
+                    onOpenEditor: onOpenEditor,
+                    onConfirmDelete: onConfirmDelete,
+                    onReschedule: onReschedule,
+                  ),
+                ),
+                SizedBox(width: boardGap),
+                Expanded(
+                  child: _WideQuadrantSection(
+                    group: later,
+                    dense: layout == _TaskMatrixLayoutMode.medium,
+                    controller: controller,
+                    onOpenEditor: onOpenEditor,
+                    onConfirmDelete: onConfirmDelete,
+                    onReschedule: onReschedule,
+                  ),
+                ),
+              ],
             ),
-            Expanded(
-              child: _WideQuadrantSection(
-                group: schedule,
-                dense: layout == _TaskMatrixLayoutMode.medium,
-                controller: controller,
-                onOpenEditor: onOpenEditor,
-                onConfirmDelete: onConfirmDelete,
-                onReschedule: onReschedule,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(
-          height: layout == _TaskMatrixLayoutMode.medium
-              ? AppSpacing.lg
-              : AppSpacing.xl,
-        ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              child: _WideQuadrantSection(
-                group: quickWins,
-                dense: layout == _TaskMatrixLayoutMode.medium,
-                controller: controller,
-                onOpenEditor: onOpenEditor,
-                onConfirmDelete: onConfirmDelete,
-                onReschedule: onReschedule,
-              ),
-            ),
-            SizedBox(
-              width: layout == _TaskMatrixLayoutMode.medium
-                  ? AppSpacing.lg
-                  : AppSpacing.xl,
-            ),
-            Expanded(
-              child: _WideQuadrantSection(
-                group: later,
-                dense: layout == _TaskMatrixLayoutMode.medium,
-                controller: controller,
-                onOpenEditor: onOpenEditor,
-                onConfirmDelete: onConfirmDelete,
-                onReschedule: onReschedule,
-              ),
-            ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -342,6 +358,7 @@ class _TaskListBoard extends StatelessWidget {
                     task: task,
                     controller: controller,
                     enableDrag: false,
+                    density: TaskCardDensity.comfortable,
                     onOpenEditor: onOpenEditor,
                     onConfirmDelete: onConfirmDelete,
                     onReschedule: onReschedule,
@@ -393,6 +410,7 @@ class _WideQuadrantSection extends StatelessWidget {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
+          height: double.infinity,
           padding: EdgeInsets.all(isHighlighted ? AppSpacing.xs : 0),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppRadii.card + AppSpacing.xs),
@@ -490,13 +508,16 @@ class _QuadrantSectionBody extends StatelessWidget {
       children: <Widget>[
         _QuadrantHeader(group: group, dense: dense),
         SizedBox(height: dense ? AppSpacing.md : AppSpacing.lg),
-        _QuadrantTaskList(
-          group: group,
-          controller: controller,
-          enableDrag: enableDrag,
-          onOpenEditor: onOpenEditor,
-          onConfirmDelete: onConfirmDelete,
-          onReschedule: onReschedule,
+        Expanded(
+          child: _QuadrantTaskViewport(
+            group: group,
+            controller: controller,
+            enableDrag: enableDrag,
+            onOpenEditor: onOpenEditor,
+            onConfirmDelete: onConfirmDelete,
+            onReschedule: onReschedule,
+            dense: dense,
+          ),
         ),
       ],
     );
@@ -592,6 +613,7 @@ class _QuadrantTaskList extends StatelessWidget {
                 task: task,
                 controller: controller,
                 enableDrag: enableDrag,
+                density: TaskCardDensity.comfortable,
                 onOpenEditor: onOpenEditor,
                 onConfirmDelete: onConfirmDelete,
                 onReschedule: onReschedule,
@@ -603,11 +625,133 @@ class _QuadrantTaskList extends StatelessWidget {
   }
 }
 
+class _QuadrantTaskViewport extends StatefulWidget {
+  const _QuadrantTaskViewport({
+    required this.group,
+    required this.controller,
+    required this.enableDrag,
+    required this.onOpenEditor,
+    required this.onConfirmDelete,
+    required this.onReschedule,
+    required this.dense,
+  });
+
+  final TaskQuadrantGroup group;
+  final TasksController controller;
+  final bool enableDrag;
+  final ValueChanged<Task> onOpenEditor;
+  final ValueChanged<Task> onConfirmDelete;
+  final ValueChanged<Task> onReschedule;
+  final bool dense;
+
+  @override
+  State<_QuadrantTaskViewport> createState() => _QuadrantTaskViewportState();
+}
+
+class _QuadrantTaskViewportState extends State<_QuadrantTaskViewport> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Task> tasks = widget.group.tasks;
+
+    if (tasks.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: Text(
+            'Здесь пока пусто. Это нормально — квадрант заполнится по мере планирования.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool useCompactCards = constraints.maxWidth >= 560;
+        final double spacing = widget.dense ? AppSpacing.md : AppSpacing.lg;
+
+        if (useCompactCards) {
+          return Scrollbar(
+            controller: _scrollController,
+            thumbVisibility: true,
+            child: GridView.builder(
+              key: Key('task-matrix-grid-${widget.group.quadrant.name}'),
+              controller: _scrollController,
+              primary: false,
+              padding: EdgeInsets.zero,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: spacing,
+                mainAxisSpacing: spacing,
+                mainAxisExtent: widget.dense ? 232 : 244,
+              ),
+              itemCount: tasks.length,
+              itemBuilder: (BuildContext context, int index) {
+                final Task task = tasks[index];
+                return _TaskCardHost(
+                  task: task,
+                  controller: widget.controller,
+                  enableDrag: widget.enableDrag,
+                  density: TaskCardDensity.compact,
+                  onOpenEditor: widget.onOpenEditor,
+                  onConfirmDelete: widget.onConfirmDelete,
+                  onReschedule: widget.onReschedule,
+                );
+              },
+            ),
+          );
+        }
+
+        return Scrollbar(
+          controller: _scrollController,
+          thumbVisibility: true,
+          child: ListView.separated(
+            key: Key('task-matrix-list-${widget.group.quadrant.name}'),
+            controller: _scrollController,
+            primary: false,
+            padding: EdgeInsets.zero,
+            itemCount: tasks.length,
+            separatorBuilder: (_, index) => SizedBox(height: spacing),
+            itemBuilder: (BuildContext context, int index) {
+              final Task task = tasks[index];
+              return _TaskCardHost(
+                task: task,
+                controller: widget.controller,
+                enableDrag: widget.enableDrag,
+                density: TaskCardDensity.comfortable,
+                onOpenEditor: widget.onOpenEditor,
+                onConfirmDelete: widget.onConfirmDelete,
+                onReschedule: widget.onReschedule,
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _TaskCardHost extends StatelessWidget {
   const _TaskCardHost({
     required this.task,
     required this.controller,
     required this.enableDrag,
+    required this.density,
     required this.onOpenEditor,
     required this.onConfirmDelete,
     required this.onReschedule,
@@ -616,6 +760,7 @@ class _TaskCardHost extends StatelessWidget {
   final Task task;
   final TasksController controller;
   final bool enableDrag;
+  final TaskCardDensity density;
   final ValueChanged<Task> onOpenEditor;
   final ValueChanged<Task> onConfirmDelete;
   final ValueChanged<Task> onReschedule;
@@ -624,6 +769,7 @@ class _TaskCardHost extends StatelessWidget {
   Widget build(BuildContext context) {
     final Widget card = TaskCard(
       task: task,
+      density: density,
       dateFormatter: Get.find<AppDateFormatter>(),
       onToggleCompleted: () => controller.toggleTaskCompletion(task),
       onTogglePostponed: () => controller.toggleTaskPostponed(task),

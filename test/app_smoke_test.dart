@@ -324,14 +324,15 @@ void main() {
     await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.tasks);
 
     expect(
-      find.byKey(const Key('task-postpone-button-task-1')),
+      find.byKey(const Key('task-overflow-button-task-1')),
       findsOneWidget,
     );
+    expect(find.byKey(const Key('task-edit-button-task-1')), findsNothing);
+    expect(find.byKey(const Key('task-postpone-button-task-1')), findsNothing);
 
-    await tester.ensureVisible(
-      find.byKey(const Key('task-edit-button-task-1')),
-    );
-    await tester.tap(find.byKey(const Key('task-edit-button-task-1')));
+    await tester.tap(find.byKey(const Key('task-overflow-button-task-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Редактировать').last);
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('task-editor-dialog')), findsOneWidget);
@@ -348,6 +349,94 @@ void main() {
       find.byKey(const Key('task-editor-status-dropdown')),
       findsOneWidget,
     );
+  });
+
+  testWidgets(
+    'на medium matrix comfortable card использует overflow вместо inline actions',
+    (WidgetTester tester) async {
+      final DateTime today = DateTime.now();
+      final AppTestHarness harness = await AppTestHarness.bootstrap(
+        taskRepository: FakeTaskRepository(
+          initialTasks: <Task>[
+            Task(
+              id: 'task-1',
+              title: 'Спланировать неделю',
+              date: DateTime(today.year, today.month, today.day),
+              isUrgent: TaskQuadrant.schedule.isUrgent,
+              isImportant: TaskQuadrant.schedule.isImportant,
+              status: TaskStatus.pending,
+              category: TaskCategory.personal,
+              createdAt: today,
+              updatedAt: today,
+            ),
+          ],
+        ),
+      );
+      addTearDown(() async => harness.dispose());
+
+      AppTestHarness.setSurfaceSize(tester, size: const Size(1200, 960));
+      addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+      await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.tasks);
+
+      expect(
+        find.byKey(const Key('task-card-density-comfortable-task-1')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('task-overflow-button-task-1')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('task-edit-button-task-1')), findsNothing);
+      expect(
+        find.byKey(const Key('task-reschedule-button-task-1')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('task-postpone-button-task-1')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('task-delete-button-task-1')), findsNothing);
+    },
+  );
+
+  testWidgets('compact card открывает editor по tap по плитке', (
+    WidgetTester tester,
+  ) async {
+    final DateTime today = DateTime.now();
+    final AppTestHarness harness = await AppTestHarness.bootstrap(
+      taskRepository: FakeTaskRepository(
+        initialTasks: <Task>[
+          Task(
+            id: 'task-1',
+            title: 'Подготовить вопросы для встречи',
+            date: DateTime(today.year, today.month, today.day),
+            isUrgent: TaskQuadrant.doNow.isUrgent,
+            isImportant: TaskQuadrant.doNow.isImportant,
+            status: TaskStatus.pending,
+            category: TaskCategory.work,
+            createdAt: today,
+            updatedAt: today,
+          ),
+        ],
+      ),
+    );
+    addTearDown(() async => harness.dispose());
+
+    AppTestHarness.setSurfaceSize(tester, size: const Size(1920, 1080));
+    addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+    await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.tasks);
+
+    expect(
+      find.byKey(const Key('task-card-density-compact-task-1')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('task-card-tile-task-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('task-editor-dialog')), findsOneWidget);
   });
 
   testWidgets('на wide layout задачу можно перетащить в другой квадрант', (
@@ -396,6 +485,69 @@ void main() {
     final Task updated = (await taskRepository.getAllTasks()).single;
     expect(updated.quadrant, TaskQuadrant.doNow);
   });
+
+  testWidgets(
+    'на очень широком экране matrix mode использует full-width board и compact cards',
+    (WidgetTester tester) async {
+      final DateTime today = DateTime.now();
+      final AppTestHarness harness = await AppTestHarness.bootstrap(
+        taskRepository: FakeTaskRepository(
+          initialTasks: <Task>[
+            Task(
+              id: 'wide-a',
+              title: 'Собрать структуру интервью',
+              date: DateTime(today.year, today.month, today.day),
+              isUrgent: true,
+              isImportant: true,
+              status: TaskStatus.pending,
+              category: TaskCategory.work,
+              createdAt: today,
+              updatedAt: today,
+            ),
+            Task(
+              id: 'wide-b',
+              title: 'Подготовить follow-up',
+              date: DateTime(today.year, today.month, today.day),
+              isUrgent: true,
+              isImportant: true,
+              status: TaskStatus.pending,
+              category: TaskCategory.call,
+              createdAt: today,
+              updatedAt: today,
+            ),
+          ],
+        ),
+      );
+      addTearDown(() async => harness.dispose());
+
+      AppTestHarness.setSurfaceSize(tester, size: const Size(1920, 1080));
+      addTearDown(() => AppTestHarness.resetSurfaceSize(tester));
+
+      await harness.pumpAppWithRoute(tester, initialRoute: AppRoutes.tasks);
+
+      final Size boardSize = tester.getSize(
+        find.byKey(const Key('tasks-matrix-wide')),
+      );
+      final Size doNowSize = tester.getSize(
+        find.byKey(const Key('task-matrix-group-doNow')),
+      );
+      final Size scheduleSize = tester.getSize(
+        find.byKey(const Key('task-matrix-group-schedule')),
+      );
+
+      expect(boardSize.width, greaterThan(1300));
+      expect(doNowSize.height, closeTo(scheduleSize.height, 0.1));
+      expect(
+        find.byKey(const Key('task-card-density-compact-wide-a')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('task-card-density-compact-wide-b')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('task-matrix-grid-doNow')), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'resize между sidebar и bottom nav не сбрасывает tasks viewport на экран Сегодня',

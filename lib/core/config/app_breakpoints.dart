@@ -13,6 +13,8 @@ abstract final class AppBreakpoints {
   static const double compactHeader = 720;
   static const double compactNavigation = 900;
   static const double pageMaxWidth = 1200;
+  static const double pageFluidMaxWidth = 1720;
+  static const double wideMatrixBoard = 1440;
 
   static AppLayoutTier layoutTierForWidth(double width) {
     if (width < compactHeader) {
